@@ -1,0 +1,105 @@
+git_project_root() {
+    git worktree list --porcelain |
+    awk '$1=="worktree" { print $2; exit }'
+}
+
+git_issue_init() {
+  root=$(git rev-parse --show-toplevel)
+
+  [ -d "$root/.issues" ] && {
+    echo ".issues already exists"
+    return 0
+  }
+
+  if git rev-parse --verify HEAD >/dev/null 2>&1; then
+    has_commit=1
+  else
+    has_commit=0
+    echo "Needs at least one commit before git issue init"
+    return 0
+  fi
+  
+
+  # Create orphan detached worktree
+  git worktree add --detach "$root/.issues" 
+
+  cd "$root/.issues" || return 1
+
+  mkdir -p issues
+
+  cat > TEMPLATE.md <<'EOF'
+---
+title:
+type:
+priority:
+---
+
+## Description
+
+## Steps to Reproduce
+
+## Expected Behavior
+
+## Notes
+EOF
+
+  cp TEMPLATE.md .issues/TEMPLATE.md
+
+#  cat > issues/0001.md <<'EOF'
+#---
+#title: Initial issue tracking setup
+#type: meta
+#priority: low
+#---
+#
+#Issue tracking initialized.
+#EOF
+
+  git add .
+  git commit -m "issue init: templates loaded"
+  commit=$(git rev-parse HEAD)
+  
+  git update-ref "$ISSUE_REF_PREFIX/$issue_id" 
+
+  echo "Initialized issue tracking in .issues/"
+
+  cd -
+}
+
+
+git_issue_edit() {
+  id=$1
+  [ -z "$id" ] && die "usage: git issue edit <id>"
+
+  editor=$(git var GIT_EDITOR) || return 1
+
+  root=$(git_project_root)
+  file="$root/.issues/issues/$id.md"
+
+  mkdir -p "$(dirname "$file")"
+  [ -f "$file" ] || cp "$root/.issues/TEMPLATE.md" "$file"
+
+  #${EDITOR:-vi} "$file"
+  sh -c "$editor \"$file\""
+}
+
+
+git_issue_commit() {
+  root=$(git_project_root)
+  cd "$root/.issues" || return 1
+
+  #if git diff --cached --quiet && git diff --quiet; then
+  #  echo "No issue changes to commit"
+  #  return 0
+  #fi
+
+  git add issues
+
+  if [ -n "$1" ]; then
+    git commit -m "$*"
+  else
+    git commit
+  fi
+
+  cd -
+}
