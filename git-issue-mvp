@@ -9,6 +9,13 @@ is_int() {
   [[ $1 =~ ^-?[0-9]+$ ]]
 }
 
+issue_git() {
+  root=$(git_project_root)
+  git -C "$root/.issues" "$@"
+}
+
+
+
 
 git_issue_init() {
   root=$(git_project_root)
@@ -590,4 +597,99 @@ git_issue_fetch() {
 # 1. git issue fetch
 # 2. git worktree add .issues/ origin/issues/latest
 # 3. git issue list
+
+
+
+issue_merge_in_progress() {
+  issue_git rev-parse -q --verify MERGE_HEAD >/dev/null 2>&1
+}
+
+git_issue_merge() {
+  [ $# -eq 1 ] || { echo "usage: git issue merge <remote>"; return 1; }
+  local remote=$1
+
+  issue_merge_in_progress && \
+    { echo "merge already in progress"; return 1; }
+
+  local L R
+  L=$(issue_ref)
+  R=$(remote_issue_ref "$remote")
+
+  issue_git show-ref --verify --quiet "$L" \
+    || { echo "no local issue snapshot"; return 1; }
+
+  issue_git show-ref --verify --quiet "$R" \
+    || { echo "no remote issue snapshot for '$remote'"; return 1; }
+
+  # Try a real merge (no auto-commit)
+  if issue_git merge --no-commit --no-ff "$R"; then
+    echo "Issue merge successful (no conflicts)"
+    echo "Run: git issue merge --continue"
+  else
+    echo "Issue merge conflict detected"
+    echo "Resolve conflicts in .issues/, then:"
+    echo "  git issue merge --continue"
+    echo "or abort with:"
+    echo "  git issue merge --abort"
+  fi
+}
+
+git_issue_merge_abort() {
+  issue_merge_in_progress \
+    || { echo "no issue merge in progress"; return 1; }
+
+  issue_git merge --abort \
+    || { echo "failed to abort issue merge"; return 1; }
+
+  echo "Issue merge aborted"
+}
+
+git_issue_merge_continue() {
+  issue_merge_in_progress \
+    || { echo "no issue merge in progress"; return 1; }
+
+  # Ensure conflicts are resolved
+  if issue_git diff --name-only --diff-filter=U | grep -q .; then
+    { echo "unresolved conflicts remain"; return 1; }
+  fi
+
+  issue_git commit \
+    || { echo "issue merge commit failed"; return 1; }
+
+  echo "Issue merge completed"
+}
+
+git_issue_status() {
+  local remote
+  remote=$(resolve_issue_remote)
+
+  echo "Issue snapshot : $(issue_ref)"
+  echo "Tracking remote: $remote"
+  echo
+
+  if issue_merge_in_progress; then
+    echo "MERGE IN PROGRESS"
+    echo
+    issue_git diff --name-only --diff-filter=U \
+      | sed 's/^/  conflict: /'
+    return
+  fi
+
+  local L R
+  L=$(issue_ref)
+  R=$(remote_issue_ref "$remote")
+
+  issue_git show-ref --verify --quiet "$R" || {
+    echo "Remote state  : not fetched"
+    return
+  }
+
+  local ahead behind
+  ahead=$(issue_git rev-list --count "$R..$L")
+  behind=$(issue_git rev-list --count "$L..$R")
+
+  printf "Ahead  : %s\n" "$ahead"
+  printf "Behind : %s\n" "$behind"
+}
+
 
