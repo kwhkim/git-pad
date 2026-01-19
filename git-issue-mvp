@@ -769,12 +769,10 @@ git_issue_status() {
       local local_oid remote_oid
       local_oid=$(git rev-parse "$(issue_ref)")
       #remote_oid=$(git rev-parse "$(remote_issue_ref "$remote_tracking")" 2>/dev/null)
-      if ! remote_oid=$(git rev-parse "$(remote_issue_ref "$remote_tracking")");  then
+      if ! remote_oid=$(git rev-parse "$(remote_issue_ref "$remote_tracking")" 2>/dev/null );  then
         echo "No remote issue snapshot for '$remote_tracking'"
-        return 1
-      fi
-
-      if [ -n "$remote_oid" ]; then
+        #return 1
+      elif [ -n "$remote_oid" ]; then
         if [ "$local_oid" = "$remote_oid" ]; then
           echo "Issues up to date with remote $remote_tracking"
         elif git merge-base --is-ancestor "$local_oid" "$remote_oid"; then
