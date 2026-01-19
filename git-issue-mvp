@@ -1,37 +1,57 @@
+#!/bin/bash
+
 git_project_root() {
     git worktree list --porcelain |
     awk '$1=="worktree" { print $2; exit }'
 }
 
+is_int() {
+  [[ $1 =~ ^-?[0-9]+$ ]]
+}
+
+
 git_issue_init() {
-  root=$(git rev-parse --show-toplevel)
+  root=$(git_project_root)
 
   [ -d "$root/.issues" ] && {
-    echo ".issues already exists"
+    echo ".issues already exists. Use the following to remove it"
+    echo ""
+    echo "  git worktree remove $root/.issues"
     return 0
   }
+  
+  echo ".issue/" >> "$root/.git/info/exclude"
 
-  if git rev-parse --verify HEAD >/dev/null 2>&1; then
-    has_commit=1
-  else
-    has_commit=0
-    echo "Needs at least one commit before git issue init"
-    return 0
-  fi
+#: since git worktree add --orphan is used, no more needed?
+#  if git rev-parse --verify HEAD >/dev/null 2>&1; then
+#    has_commit=1
+#  else
+#    has_commit=0
+#    echo "Needs at least one commit before git issue init"
+#    return 0
+#  fi
   
 
   # Create orphan detached worktree
-  git worktree add --detach "$root/.issues" 
+  # git worktree add --detach "$root/.issues" 
+  # cd "$root/.issues" || return 1
 
-  cd "$root/.issues" || return 1
-
-  mkdir -p issues
-
+  tmp_ref="refs/issues/tmp/$(date +%s)-$$"
+  #git worktree add --orphan -B temp_issues $root/.issues
+  git worktree add --orphan -B $tmp_ref $root/.issues
+  mkdir -p $root/.issues/issues
+  
+  git config --local extensions.worktreeConfig
+  cd $root/.issues  
+  git config --worktree advice.detachedHead false 
+  
   cat > TEMPLATE.md <<'EOF'
 ---
 title:
-type:
-priority:
+type: bug|feature|task|meta
+status: open|in-progress|closed
+priority: P1|P2|P3
+severity: critical|high|medium|low
 ---
 
 ## Description
@@ -43,7 +63,7 @@ priority:
 ## Notes
 EOF
 
-  cp TEMPLATE.md .issues/TEMPLATE.md
+#  cp TEMPLATE.md .issues/TEMPLATE.md
 
 #  cat > issues/0001.md <<'EOF'
 #---
@@ -59,17 +79,26 @@ EOF
   git commit -m "issue init: templates loaded"
   commit=$(git rev-parse HEAD)
   
-  git update-ref "$ISSUE_REF_PREFIX/$issue_id" 
+  #git update-ref "$ISSUE_REF_PREFIX/$issue_id" 
+  git update-ref refs/issues/latest $commit
 
   echo "Initialized issue tracking in .issues/"
-
-  cd -
+  
+  git checkout --detach
+  #git branch -D temp_issues
+  git branch -D $tmp_ref
+  cd - || { echo "failed to restore the directory"; return 1; }
 }
 
 
 git_issue_edit() {
   id=$1
-  [ -z "$id" ] && die "usage: git issue edit <id>"
+  [ -z "$id" ] && { echo "usage: git issue edit <id>"; return 1; }
+
+  if ! is_int "$id"; then echo 'usage: git issue show <id>'; echo '  <id> should be an integer'; return 1;
+  else 
+    id=$(printf "%04d" $id)
+  fi
 
   editor=$(git var GIT_EDITOR) || return 1
 
@@ -93,6 +122,8 @@ git_issue_commit() {
   #  return 0
   #fi
 
+  
+
   git add issues
 
   if [ -n "$1" ]; then
@@ -101,5 +132,310 @@ git_issue_commit() {
     git commit
   fi
 
-  cd -
+  git update-ref refs/issues/latest HEAD
+  cd - || return 1
 }
+
+git_issue_status() {
+  root=$(git_project_root)
+  output=$(git -C "$root/.issues" status --short)
+  if [[ $output == "" ]]; then
+    echo 'Nothing changed since the last commit'
+  else 
+    git -C "$root/.issues" status --short
+  fi
+}
+
+git_issue_log() {
+  root=$(git_project_root)
+  git -C "$root/.issues" log --oneline --decorate $@
+}
+
+git_issue_list() {
+  root=$(git_project_root)
+  
+  [ ! -d "$root/.issues" ] && echo ".issue not found. Use \`git issue init\` to make one" && return 1
+  ls "$root/.issues/issues" | sed 's/\.md$//'
+}
+
+git_issue_show() {
+  id=$1
+  [ -z "$id" ] && echo "usage: git issue show <id>" && return 1
+  
+  if ! is_int "$id"; then echo 'usage: git issue show <id>'; echo '  <id> should be an integer'; return 1;
+  else 
+    id=$(printf "%04d" $id)
+    root=$(git_project_root)
+    file="$root/.issues/issues/$id.md"
+
+    [ -f "$file" ] || { echo "Issue $id not found"; return 1; }
+
+    echo "issues/$id.md"
+    sed -n '1,200p' "$file"
+  fi
+}
+
+git_issue_list() {
+    root=$(git_project_root)
+    issues_dir="$root/.issues/issues" || return 1
+  
+    # check the folder .issues/
+    [ ! -d "$root/.issues" ] && echo ".issue not found. Use \`git issue init\` to make one" && return 1
+
+    printf "%-6s %-8s %-8s %-8s %s\n" "ID" "STATUS" "TYPE" "PRI" "TITLE"
+
+    for f in "$issues_dir"/*.md; do
+        [ -f "$f" ] || continue
+        id=$(basename "$f" .md)
+
+        awk -v id="$id" '
+            BEGIN {
+                in_yaml = 0
+                title = type = pri = status = ""
+            }
+
+            /^---$/ {
+                in_yaml = !in_yaml
+                next
+            }
+
+            in_yaml {
+                if ($1 == "title:") {
+                    sub(/^title:[[:space:]]*/, "")
+                    title = $0
+                }
+                else if ($1 == "type:") type = $2
+                else if ($1 == "priority:") pri = $2
+                else if ($1 == "status:") status = $2
+            }
+
+            END {
+                printf "%-6s %-8s %-8s %-8s %s\n",
+                       id,
+                       status ? status : "-",
+                       type   ? type   : "-",
+                       pri    ? pri    : "-",
+                       title  ? title  : "-"
+            }
+        ' "$f"
+    done | sort
+}
+
+
+upper() {
+    printf "%s" "$1" | tr '[:lower:]' '[:upper:]'
+}
+
+truncate() {
+    max=$1
+    shift
+    s="$*"
+    [ "${#s}" -le "$max" ] && printf "%s" "$s" ||
+        printf "%s…" "${s:0:max}"
+}
+
+rel_time() {
+    delta=$1  # seconds
+    
+    if [ "$delta" -lt 3600 ]; then
+        printf -- "<   %2dM" $((delta / 60 + 1))
+    elif [ "$delta" -lt 86400 ]; then
+        printf -- "<   %2dH" $((delta / 3600 + 1))
+    elif [ "$delta" -lt 2592000 ]; then
+        printf -- "<  %2dd " $((delta / 86400 + 1))
+    elif [ "$delta" -lt 31536000 ]; then
+        printf -- "< %2dm  " $((delta / 2592000 + 1))
+    else
+        printf -- "< %2dy  " $((delta / 31536000 + 1))
+    fi
+}
+
+priority_char() {
+    case "$1" in
+    "P1") PRI_MAP="* " ;;
+    "P2") PRI_MAP=" + " ;;
+    "P3") PRI_MAP="  -" ;;
+    *)    PRI_MAP="???" ;; # Default for unknown values
+    esac
+    
+    echo "$PRI_MAP"
+}
+
+git_issue_list_full() {
+    root=$(git_project_root)
+    issues_rootdir="$root/.issues" || return 1
+    issues_dir="$root/.issues/issues" || return 1
+    cd $issues_rootdir 
+    
+    #                 TYPE PRI  TITLE CHANGED
+    printf "%-6s %-2s %-4s %-3s %-40s %-7s %-35s %s\n" \
+        "ID" "ST" "TYPE" "PRI" "TITLE" "CHANGED" "COMMIT" "CMT_TIME"
+
+    for f in "$issues_dir"/*.md; do
+        [ -f "$f" ] || continue
+
+        id=$(basename "$f" .md)
+        rel="issues/$id.md"
+
+        # -------- frontmatter --------
+        eval "$(
+            awk '
+                BEGIN { in_yaml = 0 }
+                /^---$/ { in_yaml = !in_yaml; next }
+                in_yaml {
+                    if ($1=="status:")   print "status=\"" $2 "\""
+                    else if ($1=="type:")     print "type=\"" $2 "\""
+                    else if ($1=="priority:") print "pri=\"" $2 "\""
+                    else if ($1=="title:") {
+                        sub(/^title:[[:space:]]*/, "")
+                        print "title=\"" $0 "\""
+                    }
+                }
+            ' "$f"
+        )"
+
+
+        ST=$(upper "${status:-??}"); ST=${ST:0:2}
+        TYPE=$(upper "${type:-????}"); TYPE=${TYPE:0:4}
+        PRI=$(upper "${pri:-???}"); PRI=${PRI:0:3}
+        TITLE=$(truncate 39 "${title:-}")
+        
+        PRI_MAP=$(priority_char $PRI)
+
+        # -------- dirty / changed --------
+        if git status --porcelain -- "$rel" | grep -q .; then
+            now=$(date +%s)
+            mtime=$(stat -c %Y "$f" 2>/dev/null || stat -f %m "$f")
+            delta=$((now - mtime))
+            CHANGED=$(rel_time "$delta") 
+        else
+            CHANGED=""
+        fi
+        #if git diff --quiet -- "$rel"; then
+            
+
+        # -------- last commit --------
+        read cdate ctime cmsg <<EOF
+$(git log -1 --pretty=format:'%cd %s' --date=format:'%Y-%m-%d %H:%M' -- "$rel" 2>/dev/null)
+EOF
+        
+#        read CMT_TIME COMMIT <<EOF
+#$(git log -1 --format='%ci%x09%s' -- "$rel" 2>/dev/null)
+#EOF
+        COMMIT=$(truncate 34 "$cmsg")
+        CMT_TIME=${cdate%:*}
+
+        printf "%-6s %-2s %-4s %-3s %-40s %-7s %-35s %s\n" \
+            "$id" "$ST" "$TYPE" "$PRI_MAP" "$TITLE" "$CHANGED" "$COMMIT" "$CMT_TIME"
+    done | sort
+    cd -
+}
+
+#git_issue_list_full
+
+
+git_issue_search() {
+  local pat=
+  local title_pat=
+  local body_pat=
+  local ignore_case=0
+  
+  root=$(git_project_root)
+  issues_rootdir="$root/.issues" || return 1
+  issues_dir="$root/.issues/issues" || return 1
+
+  # parse args
+  for arg in "$@"; do
+    case $arg in
+      --title=*) title_pat=${arg#*=} ;;
+      --body=*)  body_pat=${arg#*=} ;;
+      -i)        ignore_case=1 ;;
+      *)
+        pat=$arg
+        ;;
+    esac
+  done
+
+  awk -v pat="$pat" \
+      -v title_pat="$title_pat" \
+      -v body_pat="$body_pat" \
+      -v icase="$ignore_case" '
+
+  function finish_file() {
+    match_file = 1
+
+    # field-specific predicates
+    if (title_pat != "" && !(("title" in yaml) && yaml["title"] ~ title_pat))
+      match_file = 0
+
+    if (body_pat != "" && body !~ body_pat)
+      match_file = 0
+
+    # global pattern: yaml dump + body
+    if (pat != "") {
+      dump = body
+      for (k in yaml)
+        dump = dump yaml[k] "\n"
+      if (dump !~ pat)
+        match_file = 0
+    }
+    #if (match_file && FILENAME != "") print FILENAME
+    if (match_file && prev_filename != "") print prev_filename 
+  }  
+
+  BEGIN {
+    if (icase) IGNORECASE = 1
+  }
+
+  FNR ==1 && NR > 1 {
+    finish_file()
+  }
+
+  # reset per-file state
+  FNR == 1 {
+    in_yaml = 0
+    body = ""
+    delete yaml
+    prev_filename = FILENAME
+  }
+
+  # detect YAML start
+  FNR == 1 && $0 == "---" {
+    in_yaml = 1
+    next
+  }
+
+  # detect YAML end
+  in_yaml && $0 == "---" {
+    in_yaml = 0
+    next
+  }
+
+  # parse YAML key: value (flat only)
+  in_yaml {
+    if (match($0, /^[a-zA-Z0-9_-]+:[[:space:]]*/)) {
+      key = substr($0, 1, index($0, ":") - 1)
+      val = substr($0, index($0, ":") + 1)
+      sub(/^[[:space:]]+/, "", val)
+      yaml[key] = val
+      #print FILENAME
+      #print $0
+      #print key
+      #print val
+    }
+    next
+  }
+
+  # collect body
+  {
+    body = body $0 "\n"
+  }
+
+  END {
+    finish_file()
+  }
+  ' "$issues_dir"/*.md
+}
+
+
+

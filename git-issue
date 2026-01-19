@@ -1,0 +1,24 @@
+#!/bin/bash
+
+. git-issue-mvp
+
+cmd=$1
+shift
+
+case "$cmd" in
+  init)    git_issue_init "$@" ;;
+  edit)    git_issue_edit "$@" ;;
+  status)  git_issue_status "$@" ;;
+  commit)  git_issue_commit "$@" ;;
+  log)     git_issue_log "$@" ;;
+  list)    git_issue_list "$@" ;;
+  list-full) git_issue_list_full "$@" ;; 
+  show)    git_issue_show "$@" ;;
+  search)  git_issue_search "$@" ;;
+  push)    git_issue_push "$@" ;;
+  fetch)   git_issue_fetch "$@" ;;
+  *)
+    echo "usage: git issue <init|edit|status|commit|log|list|show|search|push|fetch>"
+    exit 1
+    ;;
+esac
