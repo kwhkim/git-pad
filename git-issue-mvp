@@ -439,3 +439,155 @@ git_issue_search() {
 
 
 
+#git_issue_search Hi
+
+issue_ref() {
+  echo "refs/issues/latest"
+}
+
+remote_issue_ref() {
+  local remote=$1
+  echo "refs/remotes/$remote/issues/latest"
+}
+
+resolve_issue_remote() {
+  # 1. explicit CLI remote already handled by caller
+
+  # 2. issue.remote
+  local r
+  r=$(git config --get issue.remote)
+  [ -n "$r" ] && { echo "$r"; return; }
+
+  # 3. remote.pushDefault
+  r=$(git config --get remote.pushDefault)
+  [ -n "$r" ] && { echo "$r"; return; }
+
+  # 4. branch upstream (only if on branch)
+  local branch
+  branch=$(git symbolic-ref --quiet --short HEAD 2>/dev/null)
+  if [ -n "$branch" ]; then
+    r=$(git config --get branch.$branch.remote)
+    [ -n "$r" ] && { echo "$r"; return; }
+  fi
+
+  # 5. fallback
+  echo origin
+}
+
+git_issue_track() {
+  [ $# -eq 1 ] || { echo "usage: git issue track <remote>"; return 1; }
+  local remote=$1
+
+  # check remote exists
+  if ! git ls-remote --exit-code "$remote" >/dev/null 2>&1; then
+    echo "remote '$remote' not found"
+    return 1
+  fi
+
+  git config issue.remote "$remote" \
+    || { echo "failed to set issue.remote"; return 1; }
+
+  echo "Issues now track remote '$remote'"
+}
+
+
+
+
+
+# Original
+git_issue_push() {
+  local remote=
+  local opts=()
+
+  remote=$(git config --get remote.pushDefault || echo origin)
+
+  for arg in "$@"; do
+    case "$arg" in
+      -*)
+        opts+=("$arg")
+        ;;
+      *)
+        remote="$arg"
+        ;;
+    esac
+  done
+
+  git push "${opts[@]}" "$remote" \
+    refs/issues/latest:refs/issues/latest
+}
+
+git_issue_push() {
+  local set_upstream=0
+  local force=0
+  local remote=
+
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      -u) set_upstream=1 ;;
+      --force|-f) force=1 ;;
+      *) remote=$1 ;;
+    esac
+    shift
+  done
+
+  remote=${remote:-$(resolve_issue_remote)}
+  echo 'Pushing issues to remote '"$remote"'...'
+
+  local L R
+  L=$(issue_ref)
+  R=$(remote_issue_ref "$remote")
+
+# ! replace die
+#   replace die "([^"]+)"
+#   with { echo "$1"; return 1; }
+
+  # ensure local ref exists
+  git show-ref --verify --quiet "$L" \
+    || { echo "no local issue snapshot ($L)"; return 1; }
+
+  # fetch remote state for safety check
+  git_issue_fetch "$remote"
+
+  if [ $force -eq 0 ] && git show-ref --verify --quiet "$R"; then
+    git merge-base --is-ancestor "$R" "$L" \
+      || { echo "remote issues have advanced; use --force"; return 1; }
+  fi
+
+  git push "$remote" "$L:$L" \
+    || { echo "push failed"; return 1; }
+
+  if [ $set_upstream -eq 1 ]; then
+    git config issue.remote "$remote"
+    echo "Tracking remote set to '$remote'"
+  fi
+}
+
+
+git_issue_fetch() {
+  local remote=
+  local opts=()
+
+  for arg in "$@"; do
+    case "$arg" in
+      -*)
+        opts+=("$arg")
+        ;;
+      *)
+        remote="$arg"
+        ;;
+    esac
+  done
+
+  remote=${remote:-$(resolve_issue_remote)}
+
+  git fetch "${opts[@]}" "$remote" \
+    "$(issue_ref):$(remote_issue_ref "$remote")" \
+    || { echo "fetch failed"; return 1; }
+}
+
+
+# clone-issue workflow:
+# 1. git issue fetch
+# 2. git worktree add .issues/ origin/issues/latest
+# 3. git issue list
+

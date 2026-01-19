@@ -1,0 +1,12 @@
+tainted=0
+
+for issue in $(git for-each-ref --format='%(refname)' refs/issues); do
+    for branch in $(git for-each-ref --format='%(refname)' refs/heads); do
+        if git merge-base --is-ancestor "$issue" "$branch" 2>/dev/null; then
+            echo "TAINT: $issue is ancestor of $branch"
+            tainted=1
+        fi
+    done
+done
+
+exit $tainted

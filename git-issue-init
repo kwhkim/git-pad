@@ -1,0 +1,26 @@
+# One-time repository setup
+## Ignore .issue/ globally
+echo ".issue/" >> .git/info/exclude
+## : prevents accidental git add .
+## : accidental commits
+
+## Create issue ref namespace
+# git update-ref refs/issues/.keep $(git hash-object -t blob -w /dev/null)
+##: Git does not require ref namespaces to “exist” ahead of time.  
+
+## requires at least one commit
+if ! git rev-parse --verify HEAD >/dev/null 2>&1; then
+    git commit --allow-empty -m "root commit"
+fi
+
+## Create detached issue worktree
+git worktree add --detach .issue
+##: Now in .issue, no branch, own HEAD
+
+
+## 
+git config extensions.worktreeConfig
+cd .issue/ &&  git config --worktree advice.detachedHead false && cd - || cd - 
+
+
+

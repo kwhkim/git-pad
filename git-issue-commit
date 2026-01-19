@@ -1,0 +1,70 @@
+#!/bin/sh
+set -eux
+
+cmd="${1:-}"
+shift || true
+
+ISSUE_DIR=".issue"
+ISSUE_REF_PREFIX="refs/issues"
+
+die() {
+  echo "git issue: $*" >&2
+  exit 1
+}
+
+require_repo() {
+  git rev-parse --git-dir >/dev/null 2>&1 \
+    || die "not a git repository"
+}
+
+require_issue_worktree() {
+  git_root=$(git rev-parse --show-toplevel 2>/dev/null) \
+    || die "not a git repository"
+
+  issue_path="$git_root/.issue"
+
+  git worktree list --porcelain |
+    awk -v want="$issue_path" '
+      $1 == "worktree" && $2 == want { found = 1 }
+      END { exit !found }
+    ' || die ".issue worktree not found"
+}
+
+in_issue_worktree() {
+  git_root=$(git rev-parse --git-common-dir) || return 1
+  wt_root=$(git rev-parse --show-toplevel) || return 1
+  [ "$(basename "$wt_root")" = ".issue" ]
+}
+
+case "$cmd" in
+  commit)
+    issue_id="${1:-}"
+    [ -n "$issue_id" ] || die "usage: git issue commit <id>"
+
+    require_repo
+    # require_issue_worktree || in_issue_worktree
+    in_issue_worktree
+
+    #cd "$ISSUE_DIR"
+    wt_root=$(git rev-parse --show-toplevel)
+    cd "$wt_root"
+
+    # Ensure detached HEAD
+    branch=$(git symbolic-ref -q HEAD || true)
+    [ -z "$branch" ] || die ".issue must be detached"
+
+    # Commit issue content
+    git add .
+    git commit -m "Issue $issue_id"
+
+    commit=$(git rev-parse HEAD)
+
+    # Move commit to issue ref
+    git update-ref "$ISSUE_REF_PREFIX/$issue_id" "$commit"
+
+    echo "Issue $issue_id committed to $ISSUE_REF_PREFIX/$issue_id"
+  ;;
+  *)
+    die "unknown command: $cmd"
+  ;;
+esac
