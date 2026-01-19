@@ -768,7 +768,11 @@ git_issue_status() {
 
       local local_oid remote_oid
       local_oid=$(git rev-parse "$(issue_ref)")
-      remote_oid=$(git rev-parse "$(remote_issue_ref "$remote_tracking")" 2>/dev/null)
+      #remote_oid=$(git rev-parse "$(remote_issue_ref "$remote_tracking")" 2>/dev/null)
+      if ! remote_oid=$(git rev-parse "$(remote_issue_ref "$remote_tracking")");  then
+        echo "No remote issue snapshot for '$remote_tracking'"
+        return 1
+      fi
 
       if [ -n "$remote_oid" ]; then
         if [ "$local_oid" = "$remote_oid" ]; then
