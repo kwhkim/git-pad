@@ -1,62 +1,57 @@
-#!/bin/sh
-set -eu
+#!/usr/bin/bash
+set -euo pipefail
 
-ID_FILE=".local-repo-id"
-ALPHABET="ABCDEFGHJKMNPQRSTVWXYZ"
-ID_LEN=6
-PAD=4
+id_file=".local-repo-id"
+alphabet="ABCDEFGHJKMNPQRSTVWXYZ"
+id_len=6
+pad=4
 
 gen_repo_id() {
-  LC_ALL=C tr -dc "$ALPHABET" < /dev/urandom | head -c "$ID_LEN"
+  tr -dc "$alphabet" < /dev/urandom | head -c "$id_len" || true
+  # || true is to avoid non-zero exit code if head cuts tr output
 }
 
 repo_id_in_use() {
-  rid="$1"
-  find . -maxdepth 1 -name "$rid-*.md" -print -quit | grep -q .
+  local rid="$1"
+  if find . -maxdepth 1 -name "$rid-*.md" -print -quit | grep -q .; then
+    echo "yes"
+  else
+    echo "no"
+  fi
 }
 
 next_seq() {
-  rid="$1"
-  max=0
-  echo 1 $max
+  local rid="$1"
+  local max=0
+  local n n_dec
 
-  find . -maxdepth 1 -name "$rid-*.md" | while IFS= read -r f; do
-    echo 2 $max
-    n=$(printf '%s\n' "$f" |
-        sed -n "s/^.*$rid-\([0-9][0-9]*\)\.md$/\1/p")
-    [ -n "$n" ] || continue
-    n_raw="$n"
-    echo 3 $max
-    n_dec=$(printf '%s\n' "$n_raw" | sed 's/^0*//')
-    [ -z "$n_dec" ] && n_dec=0
-
-    [ "$n_dec" -gt "$max" ] && max="$n_dec"
-    echo 4 $max
+  shopt -s nullglob
+  for f in "$rid-"*.md; do
+    [[ $f =~ ^$rid-([0-9]+)\.md$ ]] || continue
+    n="${BASH_REMATCH[1]}"
+    n_dec=$((10#$n))   # force decimal, strips padding safely
+    (( n_dec > max )) && max="$n_dec"
   done
-  
-  echo 5 $max
+  shopt -u nullglob
 
-  printf "%0*d" "$PAD" $((max + 1))
+  printf "%0*d" "$pad" $((max + 1))
 }
 
-# Main
-if [ -f "$ID_FILE" ]; then
-  REPO_ID=$(cat "$ID_FILE")
+# ---- main ----
+
+if [[ -f $id_file ]]; then
+  repo_id=$(<"$id_file")
 else
   while :; do
-    REPO_ID=$(gen_repo_id)
-    if ! repo_id_in_use "$REPO_ID"; then
-      printf '%s\n' "$REPO_ID" > "$ID_FILE"
+    repo_id=$(gen_repo_id)
+    if [[ $(repo_id_in_use "$repo_id")  == no ]]; then
+      printf '%s\n' "$repo_id" > "$id_file"
       break
     fi
   done
 fi
 
-SEQ=$(next_seq "$REPO_ID")
+seq=$(next_seq "$repo_id")
+filename="$repo_id-$seq.md"
 
-echo $REPO_ID
-echo $SEQ
-
-FILENAME="$REPO_ID-$SEQ.md"
-
-printf '%s\n' "$FILENAME"
+printf '%s\n' "$filename"
