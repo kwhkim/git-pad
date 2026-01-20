@@ -9,6 +9,13 @@ is_int() {
   [[ $1 =~ ^-?[0-9]+$ ]]
 }
 
+issue_git() {
+  root=$(git_project_root)
+  git -C "$root/.issues" "$@"
+}
+
+
+
 
 git_issue_init() {
   root=$(git_project_root)
@@ -122,15 +129,20 @@ git_issue_commit() {
   #  return 0
   #fi
 
-  
+  if [ -f .git/MERGE_HEAD ]; then
+    echo "merge in progress; use git issue merge --continue"; return 1
+  fi
 
   git add issues
 
-  if [ -n "$1" ]; then
-    git commit -m "$*"
-  else
-    git commit
-  fi
+  #if [ -n "$1" ]; then
+  #  git commit -m "$*"
+  #else
+  #  git commit
+  #fi
+
+  git commit "$@"
+  [ $? -ne 0 ] && { echo "issue commit failed"; cd -; return 1; }
 
   git update-ref refs/issues/latest HEAD
   cd - || return 1
@@ -441,6 +453,7 @@ git_issue_search() {
 
 #git_issue_search Hi
 
+
 issue_ref() {
   echo "refs/issues/latest"
 }
@@ -449,6 +462,13 @@ remote_issue_ref() {
   local remote=$1
   echo "refs/remotes/$remote/issues/latest"
 }
+
+git_issue_worktree() {
+  root=$(git_project_root)
+  issues_rootdir="$root/.issues" || { echo ""; return 1; }
+  echo "$issues_rootdir"
+}
+
 
 resolve_issue_remote() {
   # 1. explicit CLI remote already handled by caller
@@ -473,6 +493,14 @@ resolve_issue_remote() {
   # 5. fallback
   echo origin
 }
+
+# git_issue_remote() {
+#   git config issue.remote 2>/dev/null ||
+#   git config --get remote.pushDefault ||
+#   echo origin
+# }
+
+
 
 git_issue_track() {
   [ $# -eq 1 ] || { echo "usage: git issue track <remote>"; return 1; }
@@ -503,6 +531,10 @@ git_issue_push() {
 
   for arg in "$@"; do
     case "$arg" in
+      --force|-f)
+        echo "force-push is forbidden for issues"
+        return 1
+        ;;
       -*)
         opts+=("$arg")
         ;;
@@ -590,4 +622,175 @@ git_issue_fetch() {
 # 1. git issue fetch
 # 2. git worktree add .issues/ origin/issues/latest
 # 3. git issue list
+
+
+
+issue_merge_in_progress() {
+  issue_git rev-parse -q --verify MERGE_HEAD >/dev/null 2>&1
+}
+
+git_issue_merge() {
+  local mode=
+  local remote=
+  local opts=()
+
+  for arg in "$@"; do
+    case "$arg" in
+      --abort)
+        if [ "$mode" = "--continue" ]; then
+          echo "cannot use --abort and --continue together"
+          return 1
+        fi
+        mode="--abort"
+        ;;
+      --continue)
+        mode="--continue"
+        if [ "$mode" = "--abort" ]; then
+          echo "cannot use --abort and --continue together"
+          return 1
+        fi
+        mode="--continue"
+        ;;
+      -*)
+        opts+=("$arg")
+        ;;
+      *)
+        remote="$arg"
+        ;;
+    esac
+  done
+
+  #remote=$(git_issue_remote)
+  remote=${remote:-$(resolve_issue_remote)}
+
+  local wt
+  wt=$(git_issue_worktree)
+
+  local local_ref remote_ref
+  local_ref=$(issue_ref)
+  remote_ref=$(remote_issue_ref "$remote")
+
+  issue_git show-ref --verify --quiet "$local_ref" \
+    || { echo "no local issue snapshot"; return 1; }
+
+  issue_git show-ref --verify --quiet "$remote_ref" \
+    || { echo "no remote issue snapshot for '$remote'"; return 1; }
+
+  (
+    cd "$wt" || { echo "failed to enter issue worktree $wt"; return 1; }
+
+    case $mode in
+      --abort)
+        git rebase --abort 2>/dev/null || git merge --abort
+        return 0
+        ;;
+      --continue)
+        if [ -f .git/MERGE_HEAD ]; then
+          git commit || die "commit failed"
+          git update-ref "$local_ref" HEAD
+          return 0
+        else
+          die "no merge to continue"
+        fi
+        ;;
+    esac
+
+    #git fetch "$remote" \
+    #  "refs/issues/latest:$remote_ref" || die "fetch failed"
+
+    local local_oid remote_oid
+    local_oid=$(git rev-parse "$local_ref")
+    remote_oid=$(git rev-parse "$remote_ref")
+
+    # Fast-forward?
+    if git merge-base --is-ancestor "$local_oid" "$remote_oid"; then
+      # git reset --hard "$remote_oid"
+      git merge "${opts[@]}" "$remote_oid"
+      git update-ref "$local_ref" HEAD
+      return 0
+    fi
+
+    #output=$(git rebase "$remote_oid" 2>&1)
+    #if [ $? -eq 0 ]; then
+    if output=$(git rebase "$remote_oid" 2>&1); then
+      echo "$output"
+      git update-ref "$local_ref" HEAD
+      return 0
+    else
+      echo "rebase failed, falling back to merge..."
+      git rebase --abort > /dev/null 2>&1
+      if git merge "${opts[@]}" "$remote_oid"; then
+        git update-ref "$local_ref" HEAD
+        return 0
+      fi
+    fi
+
+    # # Try rebase
+    # if git rebase "$remote_oid"; then
+    #   git update-ref "$local_ref" HEAD
+    #   return 0
+    # fi
+
+    # # Rebase failed → fallback to merge
+    # git rebase --abort
+
+    # if git merge "${opts[@]}" "$remote_oid"; then
+    #   git update-ref "$local_ref" HEAD
+    #   return 0
+    # fi
+
+    echo "Conflict detected. Resolve and run:"
+    echo "  git issue merge --continue"
+    echo "  git issue merge --abort"
+    return 1
+  )
+}
+
+git_issue_status() {
+  local wt
+  wt=$(git_issue_worktree)
+
+  (
+    cd "$wt" || exit 1
+
+    issue_gitdir=$(git rev-parse --git-dir)
+    if [ -f "$issue_gitdir"/MERGE_HEAD ]; then
+      echo "Issue merge in progress"
+      git status --short
+      exit 0
+    fi
+
+    local remote_tracking
+    #remote=$(git_issue_remote)
+    remote_tracking=$(git config --get issue.remote)
+    if [ -n "$remote_tracking" ]; then
+      #echo "$remote_tracking"  
+
+      local local_oid remote_oid
+      local_oid=$(git rev-parse "$(issue_ref)")
+      #remote_oid=$(git rev-parse "$(remote_issue_ref "$remote_tracking")" 2>/dev/null)
+      if ! remote_oid=$(git rev-parse "$(remote_issue_ref "$remote_tracking")" 2>/dev/null );  then
+        echo "No remote issue snapshot for '$remote_tracking'"
+        #return 1
+      elif [ -n "$remote_oid" ]; then
+        if [ "$local_oid" = "$remote_oid" ]; then
+          echo "Issues up to date with remote $remote_tracking"
+        elif git merge-base --is-ancestor "$local_oid" "$remote_oid"; then
+          printf "Issues behind remote $remote_tracking by %s commits\n" \
+            "$(git rev-list --count "$local_oid..$remote_oid")"
+        elif git merge-base --is-ancestor "$remote_oid" "$local_oid"; then
+          printf "Issues ahead of remote $remote_tracking by %s commits\n" \
+            "$( git rev-list --count "$remote_oid..$local_oid")"
+        else
+          printf "Issues diverged: Ahead %s, Behind %s\n" \
+            "$(git rev-list --count "$remote_oid..$local_oid")" \
+            "$(git rev-list --count "$local_oid..$remote_oid")"
+        fi
+      fi
+    fi
+
+    git status --short
+  )
+}
+
 

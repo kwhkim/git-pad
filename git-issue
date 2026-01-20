@@ -17,8 +17,10 @@ case "$cmd" in
   search)  git_issue_search "$@" ;;
   push)    git_issue_push "$@" ;;
   fetch)   git_issue_fetch "$@" ;;
+  merge)   git_issue_merge "$@" ;;
+  track)  git_issue_track "$@" ;;
   *)
-    echo "usage: git issue <init|edit|status|commit|log|list|show|search|push|fetch>"
+    echo "usage: git issue <init|edit|status|commit|log|list|show|search|push|fetch|merge>"
     exit 1
     ;;
 esac
