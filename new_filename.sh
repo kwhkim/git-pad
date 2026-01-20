@@ -1,55 +1,62 @@
-#!/usr/bin/bash
-set -euo pipefail
+#!/bin/sh
+set -eu
 
 ID_FILE=".local-repo-id"
 ALPHABET="ABCDEFGHJKMNPQRSTVWXYZ"
 ID_LEN=6
 PAD=4
 
-# Generate a random alphabetic UID
-gen_uid() {
+gen_repo_id() {
   LC_ALL=C tr -dc "$ALPHABET" < /dev/urandom | head -c "$ID_LEN"
 }
 
-# Check whether a UID already exists in filenames
-uid_in_use() {
-  local uid="$1"
-  ls "${uid}-"*.md >/dev/null 2>&1
+repo_id_in_use() {
+  rid="$1"
+  find . -maxdepth 1 -name "$rid-*.md" -print -quit | grep -q .
 }
 
-# Get next sequence number for a UID
 next_seq() {
-  local uid="$1"
-  local last
+  rid="$1"
+  max=0
+  echo 1 $max
 
-  last=$(
-    ls "${uid}-"*.md 2>/dev/null \
-      | sed -n "s/^${uid}-\([0-9]\+\)\.md$/\1/p" \
-      | sort -n \
-      | tail -1
-  )
+  find . -maxdepth 1 -name "$rid-*.md" | while IFS= read -r f; do
+    echo 2 $max
+    n=$(printf '%s\n' "$f" |
+        sed -n "s/^.*$rid-\([0-9][0-9]*\)\.md$/\1/p")
+    [ -n "$n" ] || continue
+    n_raw="$n"
+    echo 3 $max
+    n_dec=$(printf '%s\n' "$n_raw" | sed 's/^0*//')
+    [ -z "$n_dec" ] && n_dec=0
 
-  if [[ -z "${last:-}" ]]; then
-    printf "%0*d" "$PAD" 1
-  else
-    printf "%0*d" "$PAD" "$((10#$last + 1))"
-  fi
+    [ "$n_dec" -gt "$max" ] && max="$n_dec"
+    echo 4 $max
+  done
+  
+  echo 5 $max
+
+  printf "%0*d" "$PAD" $((max + 1))
 }
 
-# Main logic
-if [[ -f "$ID_FILE" ]]; then
-  repoID=$(cat "$ID_FILE")
+# Main
+if [ -f "$ID_FILE" ]; then
+  REPO_ID=$(cat "$ID_FILE")
 else
   while :; do
-    repoID=$(gen_uid)
-    if ! uid_in_use "$repoID"; then
-      echo "$repoID" > "$ID_FILE"
+    REPO_ID=$(gen_repo_id)
+    if ! repo_id_in_use "$REPO_ID"; then
+      printf '%s\n' "$REPO_ID" > "$ID_FILE"
       break
     fi
   done
 fi
 
-SEQ=$(next_seq "$repoID")
-FILENAME="${repoID}-${SEQ}.md"
+SEQ=$(next_seq "$REPO_ID")
 
-echo "$FILENAME"
+echo $REPO_ID
+echo $SEQ
+
+FILENAME="$REPO_ID-$SEQ.md"
+
+printf '%s\n' "$FILENAME"
