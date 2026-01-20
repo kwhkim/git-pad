@@ -1,5 +1,5 @@
 #!/usr/bin/bash
-set -euo pipefail
+#set -euo pipefail
 
 id_file=".local-repo-id"
 alphabet="ABCDEFGHJKMNPQRSTVWXYZ"
@@ -22,12 +22,13 @@ repo_id_in_use() {
 
 next_seq() {
   local rid="$1"
+  local ext="$2"
   local max=0
   local n n_dec
 
   shopt -s nullglob
   for f in "$rid-"*.md; do
-    [[ $f =~ ^$rid-([0-9]+)\.md$ ]] || continue
+    [[ $f =~ ^$rid-([0-9]+)\.$ext$ ]] || continue
     n="${BASH_REMATCH[1]}"
     n_dec=$((10#$n))   # force decimal, strips padding safely
     (( n_dec > max )) && max="$n_dec"
@@ -39,19 +40,30 @@ next_seq() {
 
 # ---- main ----
 
-if [[ -f $id_file ]]; then
-  repo_id=$(<"$id_file")
-else
-  while :; do
-    repo_id=$(gen_repo_id)
-    if [[ $(repo_id_in_use "$repo_id")  == no ]]; then
-      printf '%s\n' "$repo_id" > "$id_file"
-      break
-    fi
-  done
-fi
+new_filename() {
+  local ext
 
-seq=$(next_seq "$repo_id")
-filename="$repo_id-$seq.md"
+  if [[ -n $1 ]]; then
+    ext="$1"
+  else
+    ext="md"
+  fi
 
-printf '%s\n' "$filename"
+  if [[ -f $id_file ]]; then
+    repo_id=$(<"$id_file")
+  else
+    while :; do
+      repo_id=$(gen_repo_id)
+      if [[ $(repo_id_in_use "$repo_id")  == no ]]; then
+        printf '%s\n' "$repo_id" > "$id_file"
+        break
+      fi
+    done
+  fi
+
+  seq=$(next_seq "$repo_id" "$ext")
+  filename="$repo_id-$seq.$ext"
+
+  printf '%s\n' "$filename"
+}
+
