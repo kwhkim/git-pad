@@ -99,24 +99,54 @@ EOF
 
 
 git_issue_edit() {
-  id=$1
-  [ -z "$id" ] && { echo "usage: git issue edit <id>"; return 1; }
+  fn=$1
+  #fn=$1
+  [ -z "$fn" ] && { echo "usage: git issue edit <id>"; return 1; }
 
-  if ! is_int "$id"; then echo 'usage: git issue show <id>'; echo '  <id> should be an integer'; return 1;
-  else 
-    id=$(printf "%04d" $id)
-  fi
+  # if ! is_int "$id"; then echo 'usage: git issue show <id>'; echo '  <id> should be an integer'; return 1;
+  # else 
+  #   id=$(printf "%04d" $id)
+  # fi
 
   editor=$(git var GIT_EDITOR) || return 1
 
   root=$(git_project_root)
-  file="$root/.issues/issues/$id.md"
+  file="$root/.issues/issues/$fn"
+
+  #mkdir -p "$(dirname "$file")"
+  [ -f "$file" ] || { echo "Issue $fn not found"; return 1; }
+
+  #${EDITOR:-vi} "$file"
+  sh -c "$editor \"$file\""
+
+  # if cmp -s "$file" "$root/.issues/TEMPLATE.md"; then
+  #   echo "No changes made to issue $file"
+  #   read -p "Do you want to keep the file? (Y/n): " ans
+  #   if [[ $ans == [Nn]* ]]; then
+  #     rm -f "$file"
+  #     echo "Deleted template issue file $file"
+  #   else
+  #     echo "Keeping template issue file $file"
+  #   fi
+  # else  
+  #   return 0
+  # fi
+}
+
+git_issue_new() {
+  root=$(git_project_root)
+  cd "$root/.issues" || return 1
+
+  fn=$(new_filename ".md") || { echo "failed to generate new filename"; return 1; }
+
+  root=$(git_project_root)
+  file="$root/.issues/issues/$fn"
 
   mkdir -p "$(dirname "$file")"
   [ -f "$file" ] || cp "$root/.issues/TEMPLATE.md" "$file"
 
-  #${EDITOR:-vi} "$file"
-  sh -c "$editor \"$file\""
+  git_issue_edit "$fn"
+  cd - || return 1
 }
 
 
