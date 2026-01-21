@@ -136,9 +136,35 @@ EOF
 
 git_issue_edit() {
   id=$1
+
+  # Normalize ID format
+  id_left=${id%-*}
+  id_right=${id#*-}
+  if ! is_int "$id_right"; then
+    echo 'usage: git issue edit <id>'
+    echo '  <id> should be alphbets-integers like PACMAN-0012'
+    return 1
+  fi 
+
+  #echo "$id_left" "$id_right"
+  id_right=$(sed 's/^0*//' <<< "$id_right")
+  # 012은 octal number 12로 인식되므로 10진수로 바꿔줘야 함
+  id_right=$(printf "%04d" "$id_right")
+  #echo "$id_left" "$id_right"
+  
+  id="$id_left"-"$id_right"
+
+
   fn_md="$id".md
+  root=$(git_project_root)
+  wt=$(git_issue_worktree)
+  path="$wt"/issues/"$fn_md"
+  if ! safe_cd "$wt"; then
+    return 1
+  fi
+  
   #fn=$1
-  [ -z "$fn_md" ] && { echo "usage: git issue edit <id>"; return 1; }
+  [ -z "$id" ] && { echo "usage: git issue edit <id>"; return 1; }
 
   # if ! is_int "$id"; then echo 'usage: git issue show <id>'; echo '  <id> should be an integer'; return 1;
   # else 
