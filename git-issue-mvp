@@ -224,9 +224,9 @@ git_issue_list() {
     # check the folder .issues/
     [ ! -d "$root/.issues" ] && echo ".issue not found. Use \`git issue init\` to make one" && return 1
 
-    printf "%-6s %-8s %-8s %-8s %s\n" "ID" "STATUS" "TYPE" "PRI" "TITLE"
+    printf "%-13s %-8s %-8s %-8s %s\n" "ID" "STATUS" "TYPE" "PRI" "TITLE"
 
-    for f in "$issues_dir"/*.md; do
+    while IFS= read -r -d '' f; do
         [ -f "$f" ] || continue
         id=$(basename "$f" .md)
 
@@ -246,13 +246,13 @@ git_issue_list() {
                     sub(/^title:[[:space:]]*/, "")
                     title = $0
                 }
-                else if ($1 == "type:") type = $2
-                else if ($1 == "priority:") pri = $2
-                else if ($1 == "status:") status = $2
+                else if ($1 == "type:") type = substr($2, 1, 8)
+                else if ($1 == "priority:") pri = substr($2, 1, 8)
+                else if ($1 == "status:") status = substr($2, 1, 8)
             }
 
             END {
-                printf "%-6s %-8s %-8s %-8s %s\n",
+                printf "%-13s %-8s %-8s %-8s %s\n",
                        id,
                        status ? status : "-",
                        type   ? type   : "-",
@@ -260,7 +260,9 @@ git_issue_list() {
                        title  ? title  : "-"
             }
         ' "$f"
-    done | sort
+    done < <(find "$issues_dir" -maxdepth 1 -name "*.md" -type f -printf '%T@ %p\0' | sort -zrn | cut -zd' ' -f2-)
+    
+
 }
 
 
