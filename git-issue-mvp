@@ -46,7 +46,7 @@ is_int() {
 }
 
 issue_git() {
-  root=$(git_project_root)
+  root="$(git_project_root)"
   git -C "$root/.issues" "$@"
 }
 
@@ -54,7 +54,7 @@ issue_git() {
 
 
 git_issue_init() {
-  root=$(git_project_root)
+  root="$(git_project_root)"
 
   [ -d "$root/.issues" ] && {
     echo ".issues already exists. Use the following to remove it"
@@ -237,7 +237,7 @@ git_issue_status() {
 }
 
 git_issue_log() {
-  root=$(git_project_root)
+  root="$(git_project_root)"
   git -C "$root/.issues" log --oneline --decorate $@
 }
 
@@ -418,7 +418,7 @@ EOF
     done | sort
     echo '==============================='
     echo '* '"CHANGED: relative time since last modification(uncommitted changes)"
-    cd - > /dev/null
+    cd - > /dev/null || return 1
 }
 
 #git_issue_list_full
