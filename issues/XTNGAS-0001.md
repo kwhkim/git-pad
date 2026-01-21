@@ -1,8 +1,8 @@
 ---
-title: UID(Unique Identifier) for local repo
+title: function new_filename - UID(Unique Identifier) for local repo
 type: feature
 priority: high
-status: open
+status: closed
 ---
 
 ## Description
