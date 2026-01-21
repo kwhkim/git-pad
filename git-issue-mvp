@@ -193,12 +193,12 @@ git_issue_log() {
   git -C "$root/.issues" log --oneline --decorate $@
 }
 
-git_issue_list() {
-  root=$(git_project_root)
+# git_issue_list() {
+#   root=$(git_project_root)
   
-  [ ! -d "$root/.issues" ] && echo ".issue not found. Use \`git issue init\` to make one" && return 1
-  ls "$root/.issues/issues" | sed 's/\.md$//'
-}
+#   [ ! -d "$root/.issues" ] && echo ".issue not found. Use \`git issue init\` to make one" && return 1
+#   ls "$root/.issues/issues" | sed 's/\.md$//'
+# }
 
 git_issue_show() {
   id=$1
@@ -296,10 +296,10 @@ rel_time() {
 
 priority_char() {
     case "$1" in
-    "P1") PRI_MAP="* " ;;
-    "P2") PRI_MAP=" + " ;;
-    "P3") PRI_MAP="  -" ;;
-    *)    PRI_MAP="???" ;; # Default for unknown values
+    "P1") PRI_MAP="1 " ;;
+    "P2") PRI_MAP=" 2 " ;;
+    "P3") PRI_MAP="  3" ;;
+    *)    PRI_MAP="  ?" ;; # Default for unknown values
     esac
     
     echo "$PRI_MAP"
@@ -309,10 +309,10 @@ git_issue_list_full() {
     root=$(git_project_root)
     issues_rootdir="$root/.issues" || return 1
     issues_dir="$root/.issues/issues" || return 1
-    cd $issues_rootdir 
+    cd "$issues_rootdir" 
     
     #                 TYPE PRI  TITLE CHANGED
-    printf "%-6s %-2s %-4s %-3s %-40s %-7s %-35s %s\n" \
+    printf "%-11s %-2s %-4s %-3s %-40s %-7s %-35s %s\n" \
         "ID" "ST" "TYPE" "PRI" "TITLE" "CHANGED" "COMMIT" "CMT_TIME"
 
     for f in "$issues_dir"/*.md; do
@@ -322,29 +322,26 @@ git_issue_list_full() {
         rel="issues/$id.md"
 
         # -------- frontmatter --------
-        eval "$(
-            awk '
-                BEGIN { in_yaml = 0 }
-                /^---$/ { in_yaml = !in_yaml; next }
-                in_yaml {
-                    if ($1=="status:")   print "status=\"" $2 "\""
-                    else if ($1=="type:")     print "type=\"" $2 "\""
-                    else if ($1=="priority:") print "pri=\"" $2 "\""
-                    else if ($1=="title:") {
-                        sub(/^title:[[:space:]]*/, "")
-                        print "title=\"" $0 "\""
-                    }
-                }
-            ' "$f"
-        )"
-
+        # Read into variables without eval to avoid command injection
+        while IFS= read -r line; do
+            case "$line" in
+                status:*)   status="${line#status:}" ; status="${status#"${status%%[![:space:]]*}"}" ;;
+                type:*)     type="${line#type:}" ; type="${type#"${type%%[![:space:]]*}"}" ;;
+                priority:*) pri="${line#priority:}" ; pri="${pri#"${pri%%[![:space:]]*}"}" ;;
+                title:*)    title="${line#title:}" ; title="${title#"${title%%[![:space:]]*}"}" ;;
+            esac
+        done < <(awk '
+            BEGIN { in_yaml = 0 }
+            /^---$/ { in_yaml = !in_yaml; next }
+            in_yaml && /^(status|type|priority|title):/ { print }
+        ' "$f")
 
         ST=$(upper "${status:-??}"); ST=${ST:0:2}
         TYPE=$(upper "${type:-????}"); TYPE=${TYPE:0:4}
         PRI=$(upper "${pri:-???}"); PRI=${PRI:0:3}
         TITLE=$(truncate 39 "${title:-}")
         
-        PRI_MAP=$(priority_char $PRI)
+        PRI_MAP=$(priority_char "$PRI")
 
         # -------- dirty / changed --------
         if git status --porcelain -- "$rel" | grep -q .; then
@@ -355,24 +352,21 @@ git_issue_list_full() {
         else
             CHANGED=""
         fi
-        #if git diff --quiet -- "$rel"; then
-            
 
         # -------- last commit --------
-        read cdate ctime cmsg <<EOF
+        read -r cdate ctime cmsg <<EOF
 $(git log -1 --pretty=format:'%cd %s' --date=format:'%Y-%m-%d %H:%M' -- "$rel" 2>/dev/null)
 EOF
         
-#        read CMT_TIME COMMIT <<EOF
-#$(git log -1 --format='%ci%x09%s' -- "$rel" 2>/dev/null)
-#EOF
         COMMIT=$(truncate 34 "$cmsg")
         CMT_TIME=${cdate%:*}
 
-        printf "%-6s %-2s %-4s %-3s %-40s %-7s %-35s %s\n" \
+        printf "%-11s %-2s %-4s %-3s %-40s %-7s %-35s %s\n" \
             "$id" "$ST" "$TYPE" "$PRI_MAP" "$TITLE" "$CHANGED" "$COMMIT" "$CMT_TIME"
     done | sort
-    cd -
+    echo '==============================='
+    echo '* '"CHANGED: relative time since last modification(uncommitted changes)"
+    cd - > /dev/null
 }
 
 #git_issue_list_full
