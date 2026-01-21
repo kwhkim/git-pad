@@ -778,12 +778,34 @@ git_issue_merge() {
   )
 }
 
+safe_cd() {
+    local path="$1"
+    if [ ! -e "$path" ]; then
+        echo "Issue worktree not yet initiated(.issues does not exist)" >&2
+        echo "  - use 'git issue init' to create one" >&2
+        return 1
+    elif [ ! -d "$path" ]; then
+        echo "Error: .issues is not a directory" >&2
+        return 1
+    elif [ ! -x "$path" ]; then
+        echo "Error: Permission denied (no execute permission): $path" >&2
+        return 1
+    elif ! cd "$path" 2>&1; then
+        echo "Error: Cannot cd to $path (unknown reason)" >&2
+        return 1
+    fi
+    return 0
+}
+
 git_issue_status() {
   local wt
   wt=$(git_issue_worktree)
 
   (
-    cd "$wt" || exit 1
+    #cd "$wt" 2> /dev/null || { echo 'E: .issues not yet initiated.'; echo '  - use "git issue init" and "git issue pull"'; return 1; }
+    if ! safe_cd "$wt"; then
+        return 1
+    fi
 
     issue_gitdir=$(git rev-parse --git-dir)
     if [ -f "$issue_gitdir"/MERGE_HEAD ]; then
