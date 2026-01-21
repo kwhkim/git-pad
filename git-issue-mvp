@@ -172,7 +172,7 @@ git_issue_commit() {
   #fi
 
   git commit "$@"
-  [ $? -ne 0 ] && { echo "issue commit failed"; cd -; return 1; }
+  [ $? -ne 0 ] && { echo "issue commit failed"; git restore --staged issues/; cd -; return 1; }
 
   git update-ref refs/issues/latest HEAD
   cd - || return 1
@@ -204,17 +204,17 @@ git_issue_show() {
   id=$1
   [ -z "$id" ] && echo "usage: git issue show <id>" && return 1
   
-  if ! is_int "$id"; then echo 'usage: git issue show <id>'; echo '  <id> should be an integer'; return 1;
-  else 
-    id=$(printf "%04d" $id)
+  #if ! is_int "$id"; then echo 'usage: git issue show <id>'; echo '  <id> should be an integer'; return 1;
+  #else 
+    #id=$(printf "%04d" $id)
     root=$(git_project_root)
     file="$root/.issues/issues/$id.md"
 
     [ -f "$file" ] || { echo "Issue $id not found"; return 1; }
 
-    echo "issues/$id.md"
+    echo "ISSUE-FILE: issues/$id.md"
     sed -n '1,200p' "$file"
-  fi
+  #fi
 }
 
 git_issue_list() {
