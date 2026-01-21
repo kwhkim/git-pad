@@ -195,7 +195,12 @@ git_issue_new() {
 
 git_issue_commit() {
   root=$(git_project_root)
-  cd "$root/.issues" || return 1
+
+  local wt
+  wt=$(git_issue_worktree)
+  if ! safe_cd "$wt"; then
+      return 1
+  fi
 
   #if git diff --cached --quiet && git diff --quiet; then
   #  echo "No issue changes to commit"
@@ -352,7 +357,11 @@ git_issue_list_full() {
     root=$(git_project_root)
     issues_rootdir="$root/.issues" || return 1
     issues_dir="$root/.issues/issues" || return 1
-    cd "$issues_rootdir" 
+    wt=$(git_issue_worktree)
+    if ! safe_cd "$wt"; then
+      return 1
+    fi # This is safter and the following cd
+    # safe_cd "$issues_rootdir" || return 1
     
     #                 TYPE PRI  TITLE CHANGED
     printf "%-11s %-2s %-4s %-3s %-40s %-7s %-35s %s\n" \
