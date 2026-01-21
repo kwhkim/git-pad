@@ -99,9 +99,10 @@ EOF
 
 
 git_issue_edit() {
-  fn=$1
+  id=$1
+  fn_md="$id".md
   #fn=$1
-  [ -z "$fn" ] && { echo "usage: git issue edit <id>"; return 1; }
+  [ -z "$fn_md" ] && { echo "usage: git issue edit <id>"; return 1; }
 
   # if ! is_int "$id"; then echo 'usage: git issue show <id>'; echo '  <id> should be an integer'; return 1;
   # else 
@@ -111,13 +112,14 @@ git_issue_edit() {
   editor=$(git var GIT_EDITOR) || return 1
 
   root=$(git_project_root)
-  file="$root/.issues/issues/$fn"
+  wt=$(git_issue_worktree)
+  path="$wt/issues/$fn_md"
 
   #mkdir -p "$(dirname "$file")"
-  [ -f "$file" ] || { echo "Issue $fn not found"; return 1; }
+  [ -f "$path" ] || { echo "Issue $id not found"; return 1; }
 
   #${EDITOR:-vi} "$file"
-  sh -c "$editor \"$file\""
+  sh -c "$editor \"$path\"" || { echo "editor failed"; return 1; }
 
   # if cmp -s "$file" "$root/.issues/TEMPLATE.md"; then
   #   echo "No changes made to issue $file"
@@ -135,17 +137,22 @@ git_issue_edit() {
 
 git_issue_new() {
   root=$(git_project_root)
-  cd "$root/.issues" || return 1
+  # cd "$root/.issues" || return 1
+  wt=$(git_issue_worktree)
+  if ! safe_cd "$wt"; then
+        return 1
+  fi
 
-  fn=$(new_filename ".md") || { echo "failed to generate new filename"; return 1; }
+  fn_md=$(new_filename ".md") || { echo "failed to generate new filename"; return 1; }
 
   root=$(git_project_root)
-  file="$root/.issues/issues/$fn"
+  path="$wt/issues/$fn_md"
 
-  mkdir -p "$(dirname "$file")"
-  [ -f "$file" ] || cp "$root/.issues/TEMPLATE.md" "$file"
+  mkdir -p "$(dirname "$path")"
+  [ -f "$path" ] || cp "$wt/TEMPLATE.md" "$path"
 
-  git_issue_edit "$fn"
+  id=$(basename "$fn_md" .md)
+  git_issue_edit "$id" || { return 1; }
   cd - || return 1
 }
 
