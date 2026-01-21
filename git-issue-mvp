@@ -1,9 +1,45 @@
 #!/bin/bash
 
+safe_cd() {
+    local path="$1"
+    if [ ! -e "$path" ]; then
+        echo "Issue worktree not yet initiated(.issues does not exist)" >&2
+        echo "  - use 'git issue init' to create one" >&2
+        return 1
+    elif [ ! -d "$path" ]; then
+        echo "Error: .issues is not a directory" >&2
+        return 1
+    elif [ ! -x "$path" ]; then
+        echo "Error: Permission denied (no execute permission): $path" >&2
+        return 1
+    elif ! cd "$path" 2>&1; then
+        echo "Error: Cannot cd to $path (unknown reason)" >&2
+        return 1
+    fi
+    return 0
+}
+
 git_project_root() {
     git worktree list --porcelain |
     awk '$1=="worktree" { print $2; exit }'
 }
+
+issue_ref() {
+  echo "refs/issues/latest"
+}
+
+remote_issue_ref() {
+  local remote="$1"
+  echo "refs/remotes/$remote/issues/latest"
+}
+
+git_issue_worktree() {
+  # shellcheck disable=SC2155
+  local root="$(git_project_root)"
+  issues_rootdir="$root/.issues" || { echo ""; return 1; }
+  echo "$issues_rootdir"
+}
+
 
 is_int() {
   [[ $1 =~ ^-?[0-9]+$ ]]
