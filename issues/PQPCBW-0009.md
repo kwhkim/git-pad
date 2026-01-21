@@ -1,5 +1,5 @@
 ---
-title: aliases for git issue new
+title: aliases for `git issue new`
 type: enhancement
 priority: P3
 status: open
