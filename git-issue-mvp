@@ -1,5 +1,56 @@
 #!/bin/bash
 
+
+# Remote Protocol 
+  # file://
+  # path starting with / or not, ending with .git
+  # git://
+  # https://
+  # ssh://
+  # [user@]server: [^/]+@[^/]+: as an SSH URL
+  # Git's disambiguation rules
+  # 1. If the string contains a / before the :, it is never scp-like.
+  # 2. On Windows, C:\, D:repo are never scp-like.
+  # 3. For host:path, Git checks:
+  #   host has no slashes
+  #   host contains only hostname-legal characters
+  #   path is not empty
+  # 
+is_git_scp_like_host_path() {
+    local url="$1"
+    local host path host_part
+
+    # must contain exactly one colon (first colon matters)
+    [[ "$url" == *:* ]] || return 1
+
+    host_part="${url%%:*}"
+    path="${url#*:}"
+
+    # path must not be empty to be scp-like
+    [[ -n "$path" ]] || return 1
+
+    # reject if '/' appears before the colon
+    [[ "$host_part" != */* ]] || return 1
+
+    # strip optional user@ (take part after last @)
+    host="${host_part##*@}"
+
+    # host must be non-empty
+    [[ -n "$host" ]] || return 1
+
+    # hostname-legal characters: [A-Za-z0-9.-]+
+    [[ "$host" =~ ^[A-Za-z0-9.-]+$ ]] || return 1
+
+    # Windows drive-letter exclusion (only if running on Windows Git)
+    # Safe to keep on Unix — it never triggers
+    if [[ "$OSTYPE" == msys* || "$OSTYPE" == cygwin* ]]; then
+        [[ ! "$host" =~ ^[A-Za-z]$ ]] || return 1
+    fi
+
+    return 0 # scp-like
+}
+
+
 safe_cd() {
     local path="$1"
     if [ ! -e "$path" ]; then
@@ -700,13 +751,37 @@ git_issue_push() {
   while [ $# -gt 0 ]; do
     case "$1" in
       -u) set_upstream=1 ;;
-      --force|-f) force=1 ;;
+      #--force|-f) force=1 ;;
       *) remote=$1 ;;
     esac
     shift
   done
 
+  if [ $set_upstream -eq 1 ] && [ -z "$remote" ]; then
+    echo "remote must be specified when using -u"
+    return 1
+  fi
+
   remote=${remote:-$(resolve_issue_remote)}
+
+  if [[ ! ( "$remote" =~ ^file:// || \
+            "$remote" =~ ^ssh:// || \
+            "$remote" =~ ^git:// ||
+            "$remote" =~ ^https:// ||
+            "$remote" =~ ^http:// ) ]]; then
+
+    if ! is_git_scp_like_host_path "$remote"; then # not scp-like
+      if [[ ! "$path" = /* ]]; then # not absolute path
+        local root 
+        root="$(git_project_root)"
+        echo '!W: Relative local paths would not work for worktree.'
+        echo '    If it failes, try git issue push '"$root"/"$remote"
+      else
+        echo '!W: Your remote may be ambiguous whether it is scp or local path'
+        echo '    If it failes, try ssh:// or file://'"$remote"
+      fi
+    fi
+  fi
   echo 'Pushing issues to remote '"$remote"'...'
 
   local L R
@@ -722,11 +797,12 @@ git_issue_push() {
     || { echo "no local issue snapshot ($L)"; return 1; }
 
   # fetch remote state for safety check
-  git_issue_fetch "$remote"
+  # git_issue_fetch "$remote"
+  #commnted: isolate fetch from push
 
   if [ $force -eq 0 ] && git show-ref --verify --quiet "$R"; then
     git merge-base --is-ancestor "$R" "$L" \
-      || { echo "remote issues have advanced; use --force"; return 1; }
+      || { echo "remote issues have advanced; do "git issue fetch" first"; return 1; }
   fi
 
   git push "$remote" "$L:$L" \
