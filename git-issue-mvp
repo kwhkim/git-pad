@@ -720,30 +720,30 @@ git_issue_track() {
 
 
 # Original
-git_issue_push() {
-  local remote=
-  local opts=()
+# git_issue_push() {
+#   local remote=
+#   local opts=()
 
-  remote=$(git config --get remote.pushDefault || echo origin)
+#   remote=$(git config --get remote.pushDefault || echo origin)
 
-  for arg in "$@"; do
-    case "$arg" in
-      --force|-f)
-        echo "force-push is forbidden for issues"
-        return 1
-        ;;
-      -*)
-        opts+=("$arg")
-        ;;
-      *)
-        remote="$arg"
-        ;;
-    esac
-  done
+#   for arg in "$@"; do
+#     case "$arg" in
+#       --force|-f)
+#         echo "force-push is forbidden for issues"
+#         return 1
+#         ;;
+#       -*)
+#         opts+=("$arg")
+#         ;;
+#       *)
+#         remote="$arg"
+#         ;;
+#     esac
+#   done
 
-  git push "${opts[@]}" "$remote" \
-    refs/issues/latest:refs/issues/latest
-}
+#   git push "${opts[@]}" "$remote" \
+#     refs/issues/latest:refs/issues/latest
+# }
 
 git_issue_push() {
   local set_upstream=0
@@ -765,22 +765,26 @@ git_issue_push() {
   fi
 
   remote=${remote:-$(resolve_issue_remote)}
+  url_remote="$(git remote get-url --push "$remote")"
 
-  if [[ ! ( "$remote" =~ ^file:// || \
-            "$remote" =~ ^ssh:// || \
-            "$remote" =~ ^git:// ||
-            "$remote" =~ ^https:// ||
-            "$remote" =~ ^http:// ) ]]; then
+  if [[ ! ( "$url_remote" =~ ^file:// || \
+            "$url_remote" =~ ^ssh:// || \
+            "$url_remote" =~ ^git:// ||
+            "$url_remote" =~ ^https:// ||
+            "$url_remote" =~ ^http:// ) ]]; then
 
-    if ! is_git_scp_like_host_path "$remote"; then # not scp-like
-      if [[ ! "$path" = /* ]]; then # not absolute path
+    if ! is_git_scp_like_host_path "$url_remote"; then # not scp-like
+      if [[ ! "$url_remote" = /* ]]; then # not absolute path
         local root 
         root="$(git_project_root)"
         echo '!W: Relative local paths would not work for worktree.'
-        echo '    If it failes, try git issue push '"$root"/"$remote"
+        echo '    If it failes, try delete and create '"$remote"' again using the following:'
+        echo '    - git remote remove '"$remote"
+        echo '    - git remote add '"$remote"' '"$(realpath "$root"/"$url_remote")"
+        echo '    - git issue push '"$remote"
       else
         echo '!W: Your remote may be ambiguous whether it is scp or local path'
-        echo '    If it failes, try ssh:// or file://'"$remote"
+        echo '    If it failes, try ssh:// or file://'"$url_remote"
       fi
     fi
   fi
