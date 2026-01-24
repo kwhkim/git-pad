@@ -97,8 +97,10 @@ is_int() {
 }
 
 issue_git() {
-  root="$(git_project_root)"
-  git -C "$root/.issues" "$@"
+  #root="$(git_project_root)"
+  wt="$(git_issue_worktree)"
+  #git -C "$root/.issues" "$@"
+  git -C "$wt" "$@"
 }
 
 
