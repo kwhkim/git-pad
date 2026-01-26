@@ -370,15 +370,6 @@ git_issue_commit() {
   cd - || return 1
 }
 
-git_issue_status() {
-  root=$(git_project_root)
-  output=$(git -C "$root/.issues" status --short)
-  if [[ $output == "" ]]; then
-    echo 'Nothing changed since the last commit'
-  else 
-    git -C "$root/.issues" status --short
-  fi
-}
 
 git_issue_log() {
   root="$(git_project_root)"
@@ -676,20 +667,6 @@ git_issue_search() {
 #git_issue_search Hi
 
 
-issue_ref() {
-  echo "refs/issues/latest"
-}
-
-remote_issue_ref() {
-  local remote=$1
-  echo "refs/remotes/$remote/issues/latest"
-}
-
-git_issue_worktree() {
-  root=$(git_project_root)
-  issues_rootdir="$root/.issues" || { echo ""; return 1; }
-  echo "$issues_rootdir"
-}
 
 
 resolve_issue_remote() {
