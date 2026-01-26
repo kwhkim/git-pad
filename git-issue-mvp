@@ -1058,24 +1058,6 @@ git_issue_merge() {
   )
 }
 
-safe_cd() {
-    local path="$1"
-    if [ ! -e "$path" ]; then
-        echo "Issue worktree not yet initiated(.issues does not exist)" >&2
-        echo "  - use 'git issue init' to create one" >&2
-        return 1
-    elif [ ! -d "$path" ]; then
-        echo "Error: .issues is not a directory" >&2
-        return 1
-    elif [ ! -x "$path" ]; then
-        echo "Error: Permission denied (no execute permission): $path" >&2
-        return 1
-    elif ! cd "$path" 2>&1; then
-        echo "Error: Cannot cd to $path (unknown reason)" >&2
-        return 1
-    fi
-    return 0
-}
 
 git_issue_status() {
   local wt
@@ -1094,6 +1076,11 @@ git_issue_status() {
       exit 0
     fi
 
+    #if git diff-index --quiet HEAD -- || \
+    #  [ -n "$(git ls-files --others --exclude-standard)" ]; then
+    #  echo "Repository has changes or untracked files"
+    #fi
+
     local remote_tracking
     #remote=$(git_issue_remote)
     remote_tracking=$(git config --get issue.remote)
@@ -1108,12 +1095,12 @@ git_issue_status() {
         #return 1
       elif [ -n "$remote_oid" ]; then
         if [ "$local_oid" = "$remote_oid" ]; then
-          echo "Issues up to date with remote $remote_tracking"
+          echo "Issues up to date with tracking remote $remote_tracking"
         elif git merge-base --is-ancestor "$local_oid" "$remote_oid"; then
-          printf "Issues behind remote $remote_tracking by %s commits\n" \
+          printf "Issues behind tracking remote $remote_tracking by %s commits\n" \
             "$(git rev-list --count "$local_oid..$remote_oid")"
         elif git merge-base --is-ancestor "$remote_oid" "$local_oid"; then
-          printf "Issues ahead of remote $remote_tracking by %s commits\n" \
+          printf "Issues ahead of tracking remote $remote_tracking by %s commits\n" \
             "$( git rev-list --count "$remote_oid..$local_oid")"
         else
           printf "Issues diverged: Ahead %s, Behind %s\n" \
@@ -1123,7 +1110,12 @@ git_issue_status() {
       fi
     fi
 
-    git status --short
+    # if git diff-index --quiet HEAD -- || \
+    #   [ -n "$(git ls-files --others --exclude-standard)" ]; then
+    #   echo "No changes since last commit"
+    # else
+      git status --short
+    # fi
   )
 }
 
