@@ -1,13 +1,16 @@
 #!/bin/bash
 
 . git-issue-mvp
+. new_filename.sh
 
 cmd=$1
 shift
 
 case "$cmd" in
   init)    git_issue_init "$@" ;;
+  clone)   git_issue_clone "$@" ;;
   edit)    git_issue_edit "$@" ;;
+  new)     git_issue_new "$@" ;;
   status)  git_issue_status "$@" ;;
   commit)  git_issue_commit "$@" ;;
   log)     git_issue_log "$@" ;;
@@ -19,8 +22,10 @@ case "$cmd" in
   fetch)   git_issue_fetch "$@" ;;
   merge)   git_issue_merge "$@" ;;
   track)  git_issue_track "$@" ;;
+
   *)
-    echo "usage: git issue <init|edit|status|commit|log|list|show|search|push|fetch|merge>"
+    echo "usage for local   : git issue <init|add|edit|status|commit|log|list|list-full|show|search>"
+    echo "      for remotes : git issue <clone|track|push|fetch|merge>"
     exit 1
     ;;
 esac

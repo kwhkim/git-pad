@@ -27,8 +27,8 @@ next_seq() {
   local n n_dec
 
   shopt -s nullglob
-  for f in "$rid-"*.md; do
-    [[ $f =~ ^$rid-([0-9]+)\.$ext$ ]] || continue
+  for f in "issues/""$rid-"*"$ext"; do
+    [[ $f =~ ^issues/$rid-([0-9]+)$ext$ ]] || continue
     n="${BASH_REMATCH[1]}"
     n_dec=$((10#$n))   # force decimal, strips padding safely
     (( n_dec > max )) && max="$n_dec"
@@ -43,11 +43,24 @@ next_seq() {
 new_filename() {
   local ext
 
-  if [[ -n $1 ]]; then
-    ext="$1"
+  #if [[ -n $1 ]]; then
+  #  ext="$1"
+  #else
+  #  ext=".md"
+  #fi
+  if [[ $# -eq 0 ]]; then
+    ext=".md"
   else
-    ext="md"
+    ext="$1"
   fi
+
+  # if [[ -n $1 ]]; then
+  #   ext=""
+  # else
+  #   ext=$1
+  # fi
+
+  #echo $ext
 
   if [[ -f $id_file ]]; then
     repo_id=$(<"$id_file")
@@ -62,7 +75,7 @@ new_filename() {
   fi
 
   seq=$(next_seq "$repo_id" "$ext")
-  filename="$repo_id-$seq.$ext"
+  filename="$repo_id-$seq$ext"
 
   printf '%s\n' "$filename"
 }
