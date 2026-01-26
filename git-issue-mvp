@@ -103,18 +103,72 @@ issue_git() {
   git -C "$wt" "$@"
 }
 
+git_issue_clone() {
+  remote="$1"
+  root="$(git_project_root)"
+  #remote=$(git_issue_remote)
+  remote=${remote:-$(resolve_issue_remote)}
 
+  local wt
+  wt=$(git_issue_worktree)
+
+  local local_ref remote_ref
+  local_ref=$(issue_ref)
+  remote_ref=$(remote_issue_ref "$remote")
+
+  # git fetch "${opts[@]}" "$remote" \
+  #   "$(issue_ref):$(remote_issue_ref "$remote")"
+  git fetch "$remote" \
+    "$(issue_ref):$(remote_issue_ref "$remote")"
+
+  #git worktree add .issues $remote/issues/latest && cd .issues && git update-ref "$local_ref" HEAD
+  git worktree add .issues "$remote_ref" && cd .issues && git update-ref "$local_ref" HEAD &&  git update-ref "$local_ref" "$remote_ref"
+
+  
+}
 
 
 git_issue_init() {
   root="$(git_project_root)"
-
+  
   [ -d "$root/.issues" ] && {
     echo ".issues already exists. Use the following to remove it"
     echo ""
     echo "  git worktree remove $root/.issues"
     return 0
   }
+
+  #remote="$1"
+  remote=$(resolve_issue_remote)
+
+  local wt
+  wt=$(git_issue_worktree)
+
+  local local_ref remote_ref
+  local_ref="$(issue_ref)"
+  remote_ref="$(remote_issue_ref "$remote")"
+
+  if git ls-remote --exit-code "$remote" "$local_ref" > /dev/null 2>&1; then
+    # ref exists on the remote
+    echo '!W: The reference '"$local_ref"' exists on the remote('"$remote"').'
+    while true; do 
+      read -p '  - Do you want to clone it? (Y/N)' ans 
+      case "$ans" in
+        [Yy])
+          git_issue_clone "$remote"
+          git config --local extensions.worktreeConfig true || echo 'FAILED: git config --local extensions.worktreeConfig true'
+          echo ".issue/" >> "$root/.git/info/exclude"
+          cd "$wt" && { git config --worktree advice.detachedHead false; 
+          echo ".local-repo-id" >> "$(git rev-parse --git-dir)/info/exclude"; }
+          cd - 
+          return
+          ;;
+        [Nn])
+          break
+          ;;
+      esac
+    done 
+  fi
   
   echo ".issue/" >> "$root/.git/info/exclude"
 
@@ -134,13 +188,21 @@ git_issue_init() {
 
   tmp_ref="refs/issues/tmp/$(date +%s)-$$"
   #git worktree add --orphan -B temp_issues $root/.issues
-  git worktree add --orphan -B $tmp_ref $root/.issues
+  git worktree add --orphan -B $tmp_ref $root/.issues  
+
   mkdir -p $root/.issues/issues
   
-  git config --local extensions.worktreeConfig
+  git config --local extensions.worktreeConfig true || echo 'FAILED: git config --local extensions.worktreeConfig true'
+
   cd $root/.issues  
   git config --worktree advice.detachedHead false 
   
+  echo ".local-repo-id" >> "$(git rev-parse --git-dir)/info/exclude"
+  cat > .gitignore <<'EOF'
+# Ignore everything in issues/ except TEMPLATE.md 
+.local-repo-id
+EOF
+
   cat > TEMPLATE.md <<'EOF'
 ---
 title:
