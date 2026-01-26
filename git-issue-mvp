@@ -414,7 +414,7 @@ git_issue_list() {
     issues_dir="$root/.issues/issues" || return 1
   
     # check the folder .issues/
-    [ ! -d "$root/.issues" ] && echo ".issue not found. Use \`git issue init\` to make one" && return 1
+    [ ! -d "$root/.issues" ] && echo ".issue not found. Use \`git issue init\` to create new one and \`git issue clone\` to clone the remote issues" && return 1
 
     printf "%-13s %-8s %-8s %-8s %s\n" "ID" "STATUS" "TYPE" "PRI" "TITLE"
 
