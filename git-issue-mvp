@@ -255,6 +255,13 @@ git_issue_edit() {
   # Normalize ID format
   id_left=${id%-*}
   id_right=${id#*-}
+  #echo "$id_left" "$id_right"
+  if [ "$id_left" = "$id_right" ]; then
+    echo 'usage: git issue edit <id>'
+    echo '  <id> should be alphbets-integers like PACMAN-0012'
+    return 1
+  fi
+
   if ! is_int "$id_right"; then
     echo 'usage: git issue edit <id>'
     echo '  <id> should be alphbets-integers like PACMAN-0012'
@@ -287,10 +294,6 @@ git_issue_edit() {
   # fi
 
   editor=$(git var GIT_EDITOR) || return 1
-
-  root=$(git_project_root)
-  wt=$(git_issue_worktree)
-  path="$wt/issues/$fn_md"
 
   #mkdir -p "$(dirname "$file")"
   [ -f "$path" ] || { echo "Issue $id not found"; return 1; }
