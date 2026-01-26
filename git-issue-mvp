@@ -996,7 +996,28 @@ git_issue_merge() {
     # Fast-forward?
     if git merge-base --is-ancestor "$local_oid" "$remote_oid"; then
       # git reset --hard "$remote_oid"
-      git merge "${opts[@]}" "$remote_oid"
+
+      new_opts=()
+      local ff=1
+      for opt in "${opts[@]}"; do
+        #if [[ "$opt" != "--ff" && "$opt" != "--no-ff" ]]; then
+        #  new_opts+=("$opt")
+        if [[ "$opt" = "--ff" ]]; then
+          ff=1
+        elif [[ "$opt" = "--no-ff" || "$opt" = "ff-only" ]]; then
+          ff=0
+          new_opts+=("$opt")
+        fi
+      done
+      opts=("${new_opts[@]}")
+
+
+      if [[ $ff -eq 1 ]]; then
+        git merge --ff "${opts[@]}" "$remote_oid" 
+      else
+        git merge "${opts[@]}" "$remote_oid"
+      fi
+
       git update-ref "$local_ref" HEAD
       return 0
     fi
