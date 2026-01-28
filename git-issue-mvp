@@ -135,6 +135,7 @@ git_issue_init() {
     echo ".issues already exists. Use the following to remove it"
     echo ""
     echo "  git worktree remove $root/.issues"
+    echo "  git update-ref -d $(issue_ref)"
     return 0
   }
 
