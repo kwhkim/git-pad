@@ -1,7 +1,7 @@
 ---
 title: testing if git issue new works
 type: test
-priority: low
+priority: P3
 status: wip
 ---
 
