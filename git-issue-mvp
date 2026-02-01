@@ -1,6 +1,11 @@
 #!/bin/bash
 
 
+is_int() {
+  [[ $1 =~ ^-?[0-9]+$ ]]
+}
+
+
 # Remote Protocol 
   # file://
   # path starting with / or not, ending with .git
@@ -75,6 +80,14 @@ git_project_root() {
     awk '$1=="worktree" { print $2; exit }'
 }
 
+#GIT_ISSUE_DIR=".issues"
+git_issue_worktree() {
+  # shellcheck disable=SC2155
+  local root="$(git_project_root)"
+  issues_rootdir="$root/.issues" || { echo ""; return 1; }
+  echo "$issues_rootdir"
+}
+
 issue_ref() {
   echo "refs/issues/latest"
 }
@@ -84,17 +97,7 @@ remote_issue_ref() {
   echo "refs/remotes/$remote/issues/latest"
 }
 
-git_issue_worktree() {
-  # shellcheck disable=SC2155
-  local root="$(git_project_root)"
-  issues_rootdir="$root/.issues" || { echo ""; return 1; }
-  echo "$issues_rootdir"
-}
 
-
-is_int() {
-  [[ $1 =~ ^-?[0-9]+$ ]]
-}
 
 issue_git() {
   #root="$(git_project_root)"
@@ -130,11 +133,12 @@ git_issue_clone() {
 
 git_issue_init() {
   root="$(git_project_root)"
-  
-  [ -d "$root/.issues" ] && {
+  wt=$(git_issue_worktree)
+
+  [ -d "$wt" ] && {
     echo ".issues already exists. Use the following to remove it"
     echo ""
-    echo "  git worktree remove $root/.issues"
+    echo "  git worktree remove $wt"
     echo "  git update-ref -d $(issue_ref)"
     return 0
   }
@@ -149,6 +153,8 @@ git_issue_init() {
   local_ref="$(issue_ref)"
   remote_ref="$(remote_issue_ref "$remote")"
 
+  echo ".issue/" >> "$root/.git/info/exclude"
+
   if git ls-remote --exit-code "$remote" "$local_ref" > /dev/null 2>&1; then
     # ref exists on the remote
     echo '!W: The reference '"$local_ref"' exists on the remote('"$remote"').'
@@ -158,8 +164,9 @@ git_issue_init() {
         [Yy])
           git_issue_clone "$remote"
           git config --local extensions.worktreeConfig true || echo 'FAILED: git config --local extensions.worktreeConfig true'
-          echo ".issue/" >> "$root/.git/info/exclude"
-          cd "$wt" && { git config --worktree advice.detachedHead false; 
+          cd $wt && {  git config --worktree advice.detachedHead false
+          git config --worktree core.hooksPath /dev/null || echo 'FAILED: git config --worktree core.hooksPath /dev/null'
+          
           echo ".local-repo-id" >> "$(git rev-parse --git-dir)/info/exclude"; }
           cd - 
           return
@@ -171,7 +178,7 @@ git_issue_init() {
     done 
   fi
   
-  echo ".issue/" >> "$root/.git/info/exclude"
+  
 
 #: since git worktree add --orphan is used, no more needed?
 #  if git rev-parse --verify HEAD >/dev/null 2>&1; then
@@ -194,9 +201,9 @@ git_issue_init() {
   mkdir -p $root/.issues/issues
   
   git config --local extensions.worktreeConfig true || echo 'FAILED: git config --local extensions.worktreeConfig true'
-
-  cd $root/.issues  
+  cd $wt || { echo "failed to cd to issue worktree"; return 1; }
   git config --worktree advice.detachedHead false 
+  git config --worktree core.hooksPath /dev/null || echo 'FAILED: git config --worktree core.hooksPath /dev/null'
   
   echo ".local-repo-id" >> "$(git rev-parse --git-dir)/info/exclude"
   cat > .gitignore <<'EOF'
@@ -321,7 +328,7 @@ git_issue_new() {
   # cd "$root/.issues" || return 1
   wt=$(git_issue_worktree)
   if ! safe_cd "$wt"; then
-        return 1
+    return 1
   fi
 
   fn_md=$(new_filename ".md") || { echo "failed to generate new filename"; return 1; }
