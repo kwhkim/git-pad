@@ -1156,6 +1156,7 @@ git_issue_status() {
     local remote_tracking
     #remote=$(git_issue_remote)
     remote_tracking=$(git config --get issue.remote)
+    remote_tracking=${remote_tracking:-$(resolve_issue_remote)}
     if [ -n "$remote_tracking" ]; then
       #echo "$remote_tracking"  
 
@@ -1180,6 +1181,8 @@ git_issue_status() {
             "$(git rev-list --count "$local_oid..$remote_oid")"
         fi
       fi
+    else
+      echo "No tracking remote set for issues"
     fi
 
     # if git diff-index --quiet HEAD -- || \
