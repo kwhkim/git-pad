@@ -353,17 +353,71 @@ git_issue_new() {
     return 1
   fi
 
+  # Initialize variables with defaults
+  TITLE=""
+  BODY=""
+  TYPE=""
+  STATUS=""
+  PRIORITY=""
+
+  # Loop through all arguments
+  for i in "$@"; do
+    case $i in
+      --title=*)
+        # Use parameter expansion to strip "--title=" from the front
+        TITLE="${i#*=}"
+        shift # move past the argument
+        ;;
+      --body=*)
+        BODY="${i#*=}"
+        shift
+        ;;
+      --type=*)
+        TYPE="${i#*=}"
+        shift # move past the argument
+        ;;
+      --status=*)
+        STATUS="${i#*=}"
+        shift # move past the argument
+        ;;
+      --priority=*)
+        PRIORITY="${i#*=}"
+        shift # move past the argument
+        ;;
+      *)
+        # Handle unknown options or positional arguments
+        # echo "Unknown option: $i"
+        ;;
+    esac
+  done
+
   fn_md=$(new_filename ".md") || { echo "failed to generate new filename"; return 1; }
 
   root=$(git_project_root)
   path="$wt/issues/$fn_md"
 
   mkdir -p "$(dirname "$path")"
-  [ -f "$path" ] || cp "$wt/TEMPLATE.md" "$path"
+  # Validation (Optional)
+  if [[ -z "$TITLE" ]]; then
+   [ -f "$path" ] || cp "$wt/TEMPLATE.md" "$path"
+    id=$(basename "$fn_md" .md)
+    git_issue_edit "$id" || { return 1; }
+    cd - || return 1
+  else
+    {
+      echo "---"
+      echo "title: $TITLE"
+      [ -n "$TYPE" ] && echo "type: $TYPE"
+      [ -n "$STATUS" ] && echo "status: $STATUS"
+      [ -n "$PRIORITY" ] && echo "priority: $PRIORITY"
+      echo "---"
+      echo ""
+      echo "$BODY"
+    } > "$path"
+    echo "Created new issue: issues/$fn_md"
+    cd - || return 1
+  fi  
 
-  id=$(basename "$fn_md" .md)
-  git_issue_edit "$id" || { return 1; }
-  cd - || return 1
 }
 
 
