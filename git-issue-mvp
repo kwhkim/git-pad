@@ -78,6 +78,10 @@ safe_cd() {
 git_project_root() {
     git worktree list --porcelain |
     awk '$1=="worktree" { print $2; exit }'
+    # You can use
+    #   dirname "$(git rev-parse --git-common-dir)"
+    # Testing
+    #   if [ "$(git_project_root)" != "$(realpath $(dirname $(git rev-parse --git-common-dir)))" ]; then echo "alarm!"; fi
 }
 
 #GIT_ISSUE_DIR=".issues"
