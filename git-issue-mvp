@@ -861,8 +861,17 @@ git_issue_push() {
       || { echo "remote issues have advanced; do "git issue fetch" first"; return 1; }
   fi
 
-  git push "$remote" "$L:$L" \
-    || { echo "push failed"; return 1; }
+  if git push "$remote" "$L:$L"; then
+    echo -n "push successful"
+    if git_issue_fetch; then
+      echo "; local snapshot updated"
+    else
+      echo "; but failed to update local snapshot"
+    fi
+  else
+    echo "push failed"; return 1; 
+  fi
+
 
   if [ $set_upstream -eq 1 ]; then
     git config issue.remote "$remote"
