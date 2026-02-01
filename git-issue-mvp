@@ -260,25 +260,37 @@ EOF
   cd - || { echo "failed to restore the directory"; return 1; }
 }
 
+parse_issue_id() {
+  local id=$1
 
-git_issue_edit() {
-  id=$1
+  if [[ "$id" == *-* ]]; then
 
-  # Normalize ID format
-  id_left=${id%-*}
-  id_right=${id#*-}
-  #echo "$id_left" "$id_right"
-  if [ "$id_left" = "$id_right" ]; then
-    echo 'usage: git issue edit <id>'
-    echo '  <id> should be alphbets-integers like PACMAN-0012'
-    return 1
-  fi
+    # Normalize ID format
+    id_left=${id%-*}
+    id_right=${id#*-}
+    #echo "$id_left" "$id_right"
+    if [ "$id_left" = "$id_right" ]; then
+      echo 'usage: git issue edit <id>'
+      echo '  <id> should be alphbets-integers like PACMAN-0012, PACMAN-12, or PACMAN12'
+      return 1
+    fi
 
-  if ! is_int "$id_right"; then
-    echo 'usage: git issue edit <id>'
-    echo '  <id> should be alphbets-integers like PACMAN-0012'
-    return 1
-  fi 
+    if ! is_int "$id_right"; then
+      echo 'usage: git issue edit <id>'
+      echo '  <id> should be alphbets-integers like PACMAN-0012, PACMAN-12, or PACMAN12'
+      return 1
+    fi 
+  else
+    if [[ "$id" =~ ^([[:alpha:]]+)([[:digit:]]+)$ ]]; then
+            id_left="${BASH_REMATCH[1]}"
+            id_right="${BASH_REMATCH[2]}"
+        else
+            echo "usage: git issue edit <id>"
+            echo '  <id> should be alphbets-integers like PACMAN-0012, PACMAN-12, or PACMAN12'
+            return 1
+        fi
+    fi
+    
 
   #echo "$id_left" "$id_right"
   id_right=$(sed 's/^0*//' <<< "$id_right")
@@ -287,7 +299,13 @@ git_issue_edit() {
   #echo "$id_left" "$id_right"
   
   id="$id_left"-"$id_right"
+  echo "$id"
+}
 
+
+git_issue_edit() {
+
+  id="$(parse_issue_id "$1")" || return 1
 
   fn_md="$id".md
   root=$(git_project_root)
@@ -396,7 +414,7 @@ git_issue_log() {
 # }
 
 git_issue_show() {
-  id=$1
+  id="$(parse_issue_id "$1")" || return 1
   [ -z "$id" ] && echo "usage: git issue show <id>" && return 1
   
   #if ! is_int "$id"; then echo 'usage: git issue show <id>'; echo '  <id> should be an integer'; return 1;
