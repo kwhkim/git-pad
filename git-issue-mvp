@@ -1048,12 +1048,14 @@ git_issue_merge() {
         return 0
         ;;
       --continue)
-        if [ -f .git/MERGE_HEAD ]; then
-          git commit || die "commit failed"
+        if [ -f "$(git rev-parse --git-dir)"/MERGE_HEAD ]; then
+          git add issues
+          git commit || { echo "commit failed"; return 1; }
           git update-ref "$local_ref" HEAD
           return 0
         else
-          die "no merge to continue"
+          echo "no merge to continue"
+          return 1
         fi
         ;;
     esac
@@ -1123,9 +1125,9 @@ git_issue_merge() {
     #   return 0
     # fi
 
-    echo "Conflict detected. Resolve and run:"
-    echo "  git issue merge --continue"
-    echo "  git issue merge --abort"
+    echo "git-issue> Conflict detected. Resolve and run:"
+    echo "             git issue merge --continue"
+    echo "             git issue merge --abort"
     return 1
   )
 }
