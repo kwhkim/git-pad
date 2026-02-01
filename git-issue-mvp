@@ -457,7 +457,9 @@ git_issue_commit() {
 
 git_issue_log() {
   root="$(git_project_root)"
-  git -C "$root/.issues" log --oneline --decorate $@
+  remote_tracking=$(git config --get issue.remote)
+  [ -z "$remote_tracking" ] && remote_tracking=$(resolve_issue_remote)
+  git -C "$root/.issues" log --oneline --graph $@ --decorate-refs=HEAD --decorate-refs=refs/issues/latest --decorate-refs=remotes/"$remote_tracking/issues"
 }
 
 # git_issue_list() {
