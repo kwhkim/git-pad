@@ -1,7 +1,7 @@
 ---
 title: git issue new --title=... --type=... --status=... --priority=...
 type: enhancement
-status: open
+status: closed(ff1f0f4)
 priority: P3
 ---
 
