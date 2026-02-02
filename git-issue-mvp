@@ -96,6 +96,12 @@ issue_ref() {
   echo "refs/issues/latest"
 }
 
+issue_audit_ref() {
+  local local_id
+  local_id="$(cat "$(git_issue_worktree)/.local-repo-id" 2>/dev/null || echo "local")"
+  echo "refs/issues/audit/$local_id"
+}
+
 remote_issue_ref() {
   local remote="$1"
   echo "refs/remotes/$remote/issues/latest"
@@ -459,9 +465,57 @@ git_issue_commit() {
 
 git_issue_log() {
   root="$(git_project_root)"
+  wt=$(git_issue_worktree)
   remote_tracking=$(git config --get issue.remote)
+  local audit=0
+
+  for arg in "$@"; do
+    case $arg in
+      --audit)
+        audit=1
+        shift
+        ;;
+    esac
+  done
+
+
+
   [ -z "$remote_tracking" ] && remote_tracking=$(resolve_issue_remote)
-  git -C "$root/.issues" log --oneline --graph $@ --decorate-refs=HEAD --decorate-refs=refs/issues/latest --decorate-refs=remotes/"$remote_tracking/issues"
+
+  if [[ $audit -eq 1 ]]; then
+
+    #cd $wt && local_id=$(secure_repo_id)
+    echo '> audit log'
+    local_id="$(cat "$wt/.local-repo-id" 2>/dev/null )"
+    # if [[ ! -f "$wt/.local-repo-id" ]]; then
+    #   echo '!E: local-repo-id not found or can'\''t be generated'
+    #   return 1
+    # fi
+    echo "- local-repo-id: $local_id"
+    echo "- args: $@"
+
+    git -C "$root/.issues" log --oneline --graph \
+      --pretty=format:"%C(yellow)%h%C(reset) %C(magenta)%d%C(reset) %s" \
+      --decorate \
+      --decorate-refs=HEAD \
+      --decorate-refs=refs/issues/latest \
+      --decorate-refs=refs/remotes/"$remote_tracking"/issues/latest \
+      --decorate-refs=refs/issues/audit/* \
+      --decorate-refs-exclude=refs/heads/* \
+      --glob='refs/issues/audit/*' \
+      HEAD refs/issues/latest refs/remotes/"$remote_tracking"/issues/latest \
+      $@ #\
+      #--decorate-refs=refs/issues/audit/"$local_id"
+  else
+    git -C "$root/.issues" log --oneline --graph \
+      --decorate-refs=HEAD \
+      --decorate-refs=refs/issues/latest \
+      --decorate-refs=refs/remotes/"$remote_tracking"/issues/latest \
+      --decorate-refs-exclude=refs/heads/* \
+      HEAD refs/issues/latest refs/remotes/"$remote_tracking"/issues/latest \
+      $@ #\
+      #--decorate-refs=refs/issues/audit/"$local_id"
+  fi
 }
 
 # git_issue_list() {
