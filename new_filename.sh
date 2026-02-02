@@ -20,6 +20,21 @@ repo_id_in_use() {
   fi
 }
 
+secure_repo_id() {
+  if [[ -f $id_file ]]; then
+    repo_id=$(<"$id_file")
+    echo "$repo_id"
+  else
+    while :; do
+      repo_id=$(gen_repo_id)
+      if [[ $(repo_id_in_use "$repo_id")  == no ]]; then
+        printf '%s\n' "$repo_id" > "$id_file"
+        break
+      fi
+    done
+  fi
+}
+
 next_seq() {
   local rid="$1"
   local ext="$2"
