@@ -22,12 +22,12 @@ repo_id_in_use() {
 
 secure_repo_id() {
   if [[ -f $id_file ]]; then
-    repo_id=$(<"$id_file")
+    repo_id=$(< "$id_file")
     echo "$repo_id"
   else
     while :; do
       repo_id=$(gen_repo_id)
-      if [[ $(repo_id_in_use "$repo_id")  == no ]]; then
+      if [[ $(repo_id_in_use "$repo_id") == no ]]; then
         printf '%s\n' "$repo_id" > "$id_file"
         break
       fi
@@ -45,8 +45,8 @@ next_seq() {
   for f in "issues/""$rid-"*"$ext"; do
     [[ $f =~ ^issues/$rid-([0-9]+)$ext$ ]] || continue
     n="${BASH_REMATCH[1]}"
-    n_dec=$((10#$n))   # force decimal, strips padding safely
-    (( n_dec > max )) && max="$n_dec"
+    n_dec=$((10#$n)) # force decimal, strips padding safely
+    ((n_dec > max)) && max="$n_dec"
   done
   shopt -u nullglob
 
@@ -78,11 +78,11 @@ new_filename() {
   #echo $ext
 
   if [[ -f $id_file ]]; then
-    repo_id=$(<"$id_file")
+    repo_id=$(< "$id_file")
   else
     while :; do
       repo_id=$(gen_repo_id)
-      if [[ $(repo_id_in_use "$repo_id")  == no ]]; then
+      if [[ $(repo_id_in_use "$repo_id") == no ]]; then
         printf '%s\n' "$repo_id" > "$id_file"
         break
       fi
@@ -94,4 +94,3 @@ new_filename() {
 
   printf '%s\n' "$filename"
 }
-
