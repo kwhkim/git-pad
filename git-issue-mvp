@@ -997,7 +997,7 @@ git_issue_push() {
 
   if git push "$remote" "$L:$L"; then
     echo "- Push successful"
-    if git_issue_fetch; then
+    if git_issue_fetch "$remote"; then
       echo "- Local snapshot updated"
     else
       echo "- Failed to update local snapshot"
