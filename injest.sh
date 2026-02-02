@@ -6,7 +6,7 @@ REPO=pandas
 REPO_KEY="$OWNER/$REPO"
 SLICE_MINUTES_FORWARD1=300
 SLICE_MINUTES_FORWARD2=30
-SLICE_MINUTES_BACKWARD=$((60*24)) # 1 day
+SLICE_MINUTES_BACKWARD=$((60*24*30)) # 30 days
 SPAN_MINUTES_RECENT=$((60*24*7)) # 7 days
 SHARD_SIZE=1000
 
@@ -119,11 +119,11 @@ EOF
 while :; do
     echo "===="
     # ---- load state ----
-    state=$(jq '.' state.json)
+    state_gh_list=$(jq '.' state.json)
 
-    min_cov=$(jq -r '.updated_at_min' <<<"$state")
-    max_cov=$(jq -r '.updated_at_max' <<<"$state")
-    repo_created=$(jq -r '.repo_created_at' <<<"$state")
+    min_cov=$(jq -r '.updated_at_min' <<<"$state_gh_list")
+    max_cov=$(jq -r '.updated_at_max' <<<"$state_gh_list")
+    repo_created=$(jq -r '.repo_created_at' <<<"$state_gh_list")
 
     # ---- fetch repo createdAt once ----
     if [[ "$repo_created" == "" ]]; then
@@ -134,7 +134,7 @@ while :; do
         }' -F o="$OWNER" -F r="$REPO" \
         | jq -r '.data.repository.createdAt')
 
-    state=$(jq --arg rc "$repo_created" '.repo_created_at=$rc' <<<"$state")
+    state_gh_list=$(jq --arg rc "$repo_created" '.repo_created_at=$rc' <<<"$state_gh_list")
     fi
 
     if [[ "$min_cov" == "" && "$max_cov" != "" ]] || \
@@ -216,18 +216,17 @@ while :; do
 if [ -f insert.sql ]; then rm insert.sql; fi
 #i=1
 
-echo "$resp" | jq -c '.data.repository.issues.nodes[]' | while IFS= read -r row; do 
-  #echo "$row"
+while IFS= read -r row; do 
   number="$(jq -r '.number' <<< "$row")" 
   id="$(jq -r '.id' <<< "$row")" 
   title="$(jq -r '.title' <<< "$row")"
   state="$(jq -r '.state' <<< "$row")"
   created_at="$(jq -r '.createdAt' <<< "$row")"
   updated_at="$(jq -r '.updatedAt' <<< "$row")"
+  closed_at="$(jq -r '.closedAt' <<< "$row")"
   ncomments="$(jq -r '.comments.totalCount' <<< "$row")"
-  title=$(sed "s/'/''/g" <(echo "$title"))
+  title=$(sed "s/'/''/g" <<< "$title")
   
-  #echo "INSERT OR REPLACE INTO issues (number,id,title,state,created_at,updated_at,comments) VALUES($number,'$id', '$title', '$state', '$created_at', '$updated_at', $ncomments);" 
   echo "$number|$id|$updated_at|$title" 
 
   if [[ "$direction" == "forward" ]]; then
@@ -237,21 +236,17 @@ echo "$resp" | jq -c '.data.repository.issues.nodes[]' | while IFS= read -r row;
     else
       n_between=$((n_between+1))
     fi
-    # For forward scan, any data outside the range can be inserted
-    echo "INSERT OR REPLACE INTO issues (number,id,title,state,created_at,updated_at,comments) VALUES($number,'$id', '$title', '$state', '$created_at', '$updated_at', $ncomments);" >> insert.sql
+    echo "INSERT OR REPLACE INTO issues (number,id,title,state,created_at,updated_at,closed_at,comments) VALUES($number,'$id', '$title', '$state', '$created_at', '$updated_at', '$closed_at', $ncomments);" >> insert.sql
   else
     if [[ "$updated_at" < "$since" || "$updated_at" > "$until" ]]; then
       n_outside=$((n_outside+1))
       has_next_page=false
     else
       n_between=$((n_between+1))
-      # For backward scan, only data within the range is inserted
-      echo "INSERT OR IGNORE INTO issues (number,id,title,state,created_at,updated_at,comments) VALUES($number,'$id', '$title', '$state', '$created_at', '$updated_at', $ncomments);" >> insert.sql
+      echo "INSERT OR IGNORE INTO issues (number,id,title,state,created_at,updated_at,closed_at,comments) VALUES($number,'$id', '$title', '$state', '$created_at', '$updated_at', '$closed_at', $ncomments);" >> insert.sql
     fi
   fi
-  #if [ $i -eq 2 ]; then export title; break; fi
-  #i=$((i+1))
-done
+done < <(echo "$resp" | jq -c '.data.repository.issues.nodes[]')
 
 if [ -f insert.sql ]; then 
   sqlite3 issues.db < insert.sql; echo "- Record response to SQLite. done.";
@@ -261,7 +256,8 @@ fi
 
         echo "- Page summary: $n_between issues within range, $n_outside issues outside range."
         n=$((n_between + n_outside))
-        prop_n=$((n_between / 100 ))
+        #prop_n=$((n_between*100 /100))
+        prop_n=$n_between
         echo "  - Total issues processed in this page: $n ( $prop_n % within first page )"
         echo "  - Has next page: $has_next_page"
         # Break if no more pages or cursor is null
@@ -272,6 +268,37 @@ fi
             echo "- Continuing to next page."
         fi
     done
+
+    if [[ $direction == "backward" ]]; then
+      # in backward scan, if no issues found in range, we can stop
+      if [[ $prop_n -lt 40 ]]; then
+        SLICE_MINUTES_BACKWARD=$((SLICE_MINUTES_BACKWARD*2))
+        echo "  - Less than 50 issues found in range during backward scan. Increasing slice to $SLICE_MINUTES_BACKWARD minutes($((SLICE_MINUTES_BACKWARD/60/24)) days) for next scan."
+      fi
+      if [[ $prop_n -gt 90 ]]; then
+        SLICE_MINUTES_BACKWARD=$((SLICE_MINUTES_BACKWARD/2))
+        if [[ $SLICE_MINUTES_BACKWARD -lt 30 ]]; then
+          SLICE_MINUTES_BACKWARD=30
+        fi
+        echo "  - More than 90 issues found in range during backward scan. Decreasing slice to $SLICE_MINUTES_BACKWARD minutes($((SLICE_MINUTES_BACKWARD/60/24)) days) for next scan."
+      fi
+    
+    elif [[ $direction == "forward" ]]; then
+      # in forward scan, if no issues found in range, we can stop
+      if [[ $prop_n -lt 40 ]]; then
+        SLICE_MINUTES_FORWARD=$((SLICE_MINUTES_FORWARD*2))
+        echo "  - Less than 50 issues found in range during forward scan. Increasing slice to $SLICE_MINUTES_FORWARD minutes($((SLICE_MINUTES_FORWARD/60/24)) days) for next scan."
+      fi
+      if [[ $prop_n -gt 90 ]]; then
+        SLICE_MINUTES_FORWARD=$((SLICE_MINUTES_FORWARD/2))
+        if [[ $SLICE_MINUTES_FORWARD -lt 30 ]]; then
+          SLICE_MINUTES_FORWARD=30
+        fi
+        echo "  - More than 90 issues found in range during forward scan. Decreasing slice to $SLICE_MINUTES_FORWARD minutes($((SLICE_MINUTES_FORWARD/60/24)) days) for next scan."
+      fi
+    fi
+
+
 
 
     # ---- update coverage ----
@@ -301,9 +328,11 @@ fi
 
     echo "  - Updated coverage: $min_cov → $max_cov"
 
-    state=$(jq --arg a "$min_cov" --arg b "$max_cov" \
-    '.updated_at_min=$a | .updated_at_max=$b' <<<"$state")
+    echo "  - Current state(gh list):"
+    echo "$state_gh_list"
+    state_gh_list=$(jq --arg a "$min_cov" --arg b "$max_cov" \
+    '.updated_at_min=$a | .updated_at_max=$b' <<<"$state_gh_list")
 
-    echo "$state" > state.json
+    echo "$state_gh_list" > state.json
 
 done
