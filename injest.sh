@@ -224,6 +224,8 @@ while IFS= read -r row; do
   created_at="$(jq -r '.createdAt' <<< "$row")"
   updated_at="$(jq -r '.updatedAt' <<< "$row")"
   closed_at="$(jq -r '.closedAt' <<< "$row")"
+  labels="$(jq -r '[.labels.nodes[].name] | join("|")' <<< "$row")"
+  assignees="$(jq -r '[.assignees.nodes[].login] | join("|")' <<< "$row")"
   ncomments="$(jq -r '.comments.totalCount' <<< "$row")"
   title=$(sed "s/'/''/g" <<< "$title")
   
@@ -236,14 +238,14 @@ while IFS= read -r row; do
     else
       n_between=$((n_between+1))
     fi
-    echo "INSERT OR REPLACE INTO issues (number,id,title,state,created_at,updated_at,closed_at,comments) VALUES($number,'$id', '$title', '$state', '$created_at', '$updated_at', '$closed_at', $ncomments);" >> insert.sql
+    echo "INSERT OR REPLACE INTO issues (number,id,title,state,created_at,updated_at,closed_at,labels,assignees,comments) VALUES($number,'$id', '$title', '$state', '$created_at', '$updated_at', '$closed_at', '$labels', '$assignees',  $ncomments);" >> insert.sql
   else
     if [[ "$updated_at" < "$since" || "$updated_at" > "$until" ]]; then
       n_outside=$((n_outside+1))
       has_next_page=false
     else
       n_between=$((n_between+1))
-      echo "INSERT OR IGNORE INTO issues (number,id,title,state,created_at,updated_at,closed_at,comments) VALUES($number,'$id', '$title', '$state', '$created_at', '$updated_at', '$closed_at', $ncomments);" >> insert.sql
+      echo "INSERT OR IGNORE INTO issues (number,id,title,state,created_at,updated_at,closed_at,labels,assignees,comments) VALUES($number,'$id', '$title', '$state', '$created_at', '$updated_at', '$closed_at', '$labels', '$assignees', $ncomments);" >> insert.sql
     fi
   fi
 done < <(echo "$resp" | jq -c '.data.repository.issues.nodes[]')
