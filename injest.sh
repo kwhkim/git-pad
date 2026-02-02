@@ -173,86 +173,49 @@ while :; do
     echo "- Scan $direction : $since → $until"
 
     # ---- fetch ----
-    if [[ "$direction" == "forward" ]]; then
-       resp=$(gh api graphql \
-    -F owner="$OWNER" \
-    -F repo="$REPO" \
-    -F since="$since" \
-    -F until="$until" \
-    -f query="$GQL_FORWARD")
-    else
-       resp=$(gh api graphql \
-    -F owner="$OWNER" \
-    -F repo="$REPO" \
-    -F since="$since" \
-    -F until="$until" \
-    -f query="$GQL_BACKWARD")
-    fi
+
+    cursor=""
+    has_next_page=true
+    
+    n_between=0
+    n_outside=0
+
+    while [ "$has_next_page" = "true" ]; do
+      echo "- Fetching page with cursor: ${cursor:-null}"
+
+      if [[ "$direction" == "forward" ]]; then
+        GQL="$GQL_FORWARD"
+      else
+        GQL="$GQL_BACKWARD"
+      fi
+        
+        
+      if [ -z "$cursor" ]; then
+        resp=$(gh api graphql \
+        -F owner="$OWNER" \
+        -F repo="$REPO" \
+        -F since="$since" \
+        -f query="$GQL")
+      else
+        resp=$(gh api graphql \
+        -F owner="$OWNER" \
+        -F repo="$REPO" \
+        -F since="$since" \
+        -F cursor="$cursor" \
+        -f query="$GQL")
+      fi
    
+    # Extract page info
+    has_next_page=$(echo "$resp" | jq -r '.data.repository.issues.pageInfo.hasNextPage')
+    cursor=$(echo "$resp" | jq -r '.data.repository.issues.pageInfo.endCursor')
+
     echo "- Writing response to resp.txt ..."
     echo "$resp" > resp.txt
-
-# ---- upsert into sqlite ----
-# since=2026-01-26T10:58:14Z
-# until=2026-01-26T11:28:14Z
-
-
-# CREATE TABLE IF NOT EXISTS issues (
-#   id            TEXT PRIMARY KEY,
-#   number        INTEGER NOT NULL,
-#   title         TEXT NOT NULL,
-#   state         TEXT NOT NULL,
-#   created_at    TEXT NOT NULL,
-#   updated_at    TEXT NOT NULL,
-#   closed_at     TEXT,
-#   labels        TEXT,
-#   assignees     TEXT,
-#   comments      INTEGER NOT NULL,
-#   ingested_at   TEXT NOT NULL
-# );
-
-# !
-# JSON allows ' freely.
-# SQL does not allow unescaped ' inside '...'. 
-
-
-#  | select(.updatedAt > "'"$since"'" and .updatedAt <= "'"$until"'")
-# ! special characters like ' is problematic inside single quotes in SQL.'
-# echo "- Record response to SQLite."
-#     echo "$resp" | jq -c '
-#   .data.repository.issues.nodes[]
-#   | {
-#       number,
-#       node_id:.nodeId,
-#       updated_at:.updatedAt,
-#       title:.title,
-#       state:.state,
-#       created_at:.createdAt,
-#       updated_at:.updatedAt,
-#       comments:.comments.totalCount
-#     }' | while read -r row; do
-
-#         sqlite3 issues.db <<SQL
-#         .parameter init
-# .parameter set :row '$row'
-
-# INSERT OR REPLACE INTO issues
-# (number,id,title,state,created_at, updated_at, comments)
-# VALUES (
-#   json_extract('$row','$.number'),
-#   json_extract('$row','$.node_id'),
-#   json_extract('$row','$.title'),
-#   json_extract('$row','$.state'),
-#   json_extract('$row','$.created_at'),
-#   json_extract('$row','$.updated_at'),
-#   json_extract('$row','$.comments')
-# );
-# SQL
-# done
 
 
 if [ -f insert.sql ]; then rm insert.sql; fi
 #i=1
+
 echo "$resp" | jq -c '.data.repository.issues.nodes[]' | while IFS= read -r row; do 
   #echo "$row"
   number="$(jq -r '.number' <<< "$row")" 
@@ -268,17 +231,47 @@ echo "$resp" | jq -c '.data.repository.issues.nodes[]' | while IFS= read -r row;
   echo "$number|$id|$updated_at|$title" 
 
   if [[ "$direction" == "forward" ]]; then
-    
+    if [[ "$updated_at" < "$since" || "$updated_at" > "$until" ]]; then
+      n_outside=$((n_outside+1))
+      has_next_page=false
+    else
+      n_between=$((n_between+1))
+    fi
+    # For forward scan, any data outside the range can be inserted
     echo "INSERT OR REPLACE INTO issues (number,id,title,state,created_at,updated_at,comments) VALUES($number,'$id', '$title', '$state', '$created_at', '$updated_at', $ncomments);" >> insert.sql
   else
-    echo "INSERT OR IGNORE INTO issues (number,id,title,state,created_at,updated_at,comments) VALUES($number,'$id', '$title', '$state', '$created_at', '$updated_at', $ncomments);" >> insert.sql
+    if [[ "$updated_at" < "$since" || "$updated_at" > "$until" ]]; then
+      n_outside=$((n_outside+1))
+      has_next_page=false
+    else
+      n_between=$((n_between+1))
+      # For backward scan, only data within the range is inserted
+      echo "INSERT OR IGNORE INTO issues (number,id,title,state,created_at,updated_at,comments) VALUES($number,'$id', '$title', '$state', '$created_at', '$updated_at', $ncomments);" >> insert.sql
+    fi
   fi
   #if [ $i -eq 2 ]; then export title; break; fi
   #i=$((i+1))
 done
 
-if [ -f insert.sql ]; then sqlite3 issues.db < insert.sql; echo "- Record response to SQLite. done.";
-else echo '- Nothing to SQLite'; fi
+if [ -f insert.sql ]; then 
+  sqlite3 issues.db < insert.sql; echo "- Record response to SQLite. done.";
+else 
+  echo '- Nothing to SQLite'; 
+fi
+
+        echo "- Page summary: $n_between issues within range, $n_outside issues outside range."
+        n=$((n_between + n_outside))
+        prop_n=$((n_between / 100 ))
+        echo "  - Total issues processed in this page: $n ( $prop_n % within first page )"
+        echo "  - Has next page: $has_next_page"
+        # Break if no more pages or cursor is null
+        if [ "$has_next_page" != "true" ] || [ "$cursor" = "null" ]; then
+            echo "- Going to next scan slice."
+            break
+        else
+            echo "- Continuing to next page."
+        fi
+    done
 
 
     # ---- update coverage ----
