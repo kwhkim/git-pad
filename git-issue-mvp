@@ -1,94 +1,94 @@
 #!/bin/bash
 
-
 is_int() {
   [[ $1 =~ ^-?[0-9]+$ ]]
 }
 
-
-# Remote Protocol 
-  # file://
-  # path starting with / or not, ending with .git
-  # git://
-  # https://
-  # ssh://
-  # [user@]server: [^/]+@[^/]+: as an SSH URL
-  # Git's disambiguation rules
-  # 1. If the string contains a / before the :, it is never scp-like.
-  # 2. On Windows, C:\, D:repo are never scp-like.
-  # 3. For host:path, Git checks:
-  #   host has no slashes
-  #   host contains only hostname-legal characters
-  #   path is not empty
-  # 
+# Remote Protocol
+# file://
+# path starting with / or not, ending with .git
+# git://
+# https://
+# ssh://
+# [user@]server: [^/]+@[^/]+: as an SSH URL
+# Git's disambiguation rules
+# 1. If the string contains a / before the :, it is never scp-like.
+# 2. On Windows, C:\, D:repo are never scp-like.
+# 3. For host:path, Git checks:
+#   host has no slashes
+#   host contains only hostname-legal characters
+#   path is not empty
+#
 is_git_scp_like_host_path() {
-    local url="$1"
-    local host path host_part
+  local url="$1"
+  local host path host_part
 
-    # must contain exactly one colon (first colon matters)
-    [[ "$url" == *:* ]] || return 1
+  # must contain exactly one colon (first colon matters)
+  [[ "$url" == *:* ]] || return 1
 
-    host_part="${url%%:*}"
-    path="${url#*:}"
+  host_part="${url%%:*}"
+  path="${url#*:}"
 
-    # path must not be empty to be scp-like
-    [[ -n "$path" ]] || return 1
+  # path must not be empty to be scp-like
+  [[ -n "$path" ]] || return 1
 
-    # reject if '/' appears before the colon
-    [[ "$host_part" != */* ]] || return 1
+  # reject if '/' appears before the colon
+  [[ "$host_part" != */* ]] || return 1
 
-    # strip optional user@ (take part after last @)
-    host="${host_part##*@}"
+  # strip optional user@ (take part after last @)
+  host="${host_part##*@}"
 
-    # host must be non-empty
-    [[ -n "$host" ]] || return 1
+  # host must be non-empty
+  [[ -n "$host" ]] || return 1
 
-    # hostname-legal characters: [A-Za-z0-9.-]+
-    [[ "$host" =~ ^[A-Za-z0-9.-]+$ ]] || return 1
+  # hostname-legal characters: [A-Za-z0-9.-]+
+  [[ "$host" =~ ^[A-Za-z0-9.-]+$ ]] || return 1
 
-    # Windows drive-letter exclusion (only if running on Windows Git)
-    # Safe to keep on Unix — it never triggers
-    if [[ "$OSTYPE" == msys* || "$OSTYPE" == cygwin* ]]; then
-        [[ ! "$host" =~ ^[A-Za-z]$ ]] || return 1
-    fi
+  # Windows drive-letter exclusion (only if running on Windows Git)
+  # Safe to keep on Unix — it never triggers
+  if [[ "$OSTYPE" == msys* || "$OSTYPE" == cygwin* ]]; then
+    [[ ! "$host" =~ ^[A-Za-z]$ ]] || return 1
+  fi
 
-    return 0 # scp-like
+  return 0 # scp-like
 }
 
-
 safe_cd() {
-    local path="$1"
-    if [ ! -e "$path" ]; then
-        echo "Issue worktree not yet initiated(.issues does not exist)" >&2
-        echo "  - use 'git issue init' to create one" >&2
-        return 1
-    elif [ ! -d "$path" ]; then
-        echo "Error: .issues is not a directory" >&2
-        return 1
-    elif [ ! -x "$path" ]; then
-        echo "Error: Permission denied (no execute permission): $path" >&2
-        return 1
-    elif ! cd "$path" 2>&1; then
-        echo "Error: Cannot cd to $path (unknown reason)" >&2
-        return 1
-    fi
-    return 0
+  local path="$1"
+  if [ ! -e "$path" ]; then
+    echo "Issue worktree not yet initiated(.issues does not exist)" >&2
+    echo "  - use 'git issue init' to create one" >&2
+    return 1
+  elif [ ! -d "$path" ]; then
+    echo "Error: .issues is not a directory" >&2
+    return 1
+  elif [ ! -x "$path" ]; then
+    echo "Error: Permission denied (no execute permission): $path" >&2
+    return 1
+  elif ! cd "$path" 2>&1; then
+    echo "Error: Cannot cd to $path (unknown reason)" >&2
+    return 1
+  fi
+  return 0
 }
 
 git_project_root() {
-    git worktree list --porcelain |
+  git worktree list --porcelain |
     awk '$1=="worktree" { print $2; exit }'
-    # You can use
-    #   dirname "$(git rev-parse --git-common-dir)"
-    # Testing
-    #   if [ "$(git_project_root)" != "$(realpath $(dirname $(git rev-parse --git-common-dir)))" ]; then echo "alarm!"; fi
+  # You can use
+  #   dirname "$(git rev-parse --git-common-dir)"
+  # Testing
+  #   if [ "$(git_project_root)" != "$(realpath $(dirname $(git rev-parse --git-common-dir)))" ]; then echo "alarm!"; fi
 }
 
 #GIT_ISSUE_DIR=".issues"
 git_issue_worktree() {
   # shellcheck disable=SC2155
   local root="$(git_project_root)"
-  issues_rootdir="$root/.issues" || { echo ""; return 1; }
+  issues_rootdir="$root/.issues" || {
+    echo ""
+    return 1
+  }
   echo "$issues_rootdir"
 }
 
@@ -98,7 +98,7 @@ issue_ref() {
 
 issue_audit_ref() {
   local local_id
-  local_id="$(cat "$(git_issue_worktree)/.local-repo-id" 2>/dev/null || echo "local")"
+  local_id="$(cat "$(git_issue_worktree)/.local-repo-id" 2> /dev/null || echo "local")"
   echo "refs/issues/audit/$local_id"
 }
 
@@ -106,8 +106,6 @@ remote_issue_ref() {
   local remote="$1"
   echo "refs/remotes/$remote/issues/latest"
 }
-
-
 
 issue_git() {
   #root="$(git_project_root)"
@@ -135,11 +133,9 @@ git_issue_clone() {
     "$(issue_ref):$(remote_issue_ref "$remote")"
 
   #git worktree add .issues $remote/issues/latest && cd .issues && git update-ref "$local_ref" HEAD
-  git worktree add .issues "$remote_ref" && cd .issues && git update-ref "$local_ref" HEAD &&  git update-ref "$local_ref" "$remote_ref"
+  git worktree add .issues "$remote_ref" && cd .issues && git update-ref "$local_ref" HEAD && git update-ref "$local_ref" "$remote_ref"
 
-  
 }
-
 
 git_issue_init() {
   root="$(git_project_root)"
@@ -168,60 +164,62 @@ git_issue_init() {
   if git ls-remote --exit-code "$remote" "$local_ref" > /dev/null 2>&1; then
     # ref exists on the remote
     echo '!W: The reference '"$local_ref"' exists on the remote('"$remote"').'
-    while true; do 
-      read -p '  - Do you want to clone it? (Y/N)' ans 
+    while true; do
+      read -p '  - Do you want to clone it? (Y/N)' ans
       case "$ans" in
         [Yy])
           git_issue_clone "$remote"
           git config --local extensions.worktreeConfig true || echo 'FAILED: git config --local extensions.worktreeConfig true'
-          cd $wt && {  git config --worktree advice.detachedHead false
-          git config --worktree core.hooksPath /dev/null || echo 'FAILED: git config --worktree core.hooksPath /dev/null'
-          
-          echo ".local-repo-id" >> "$(git rev-parse --git-dir)/info/exclude"; }
-          cd - 
+          cd $wt && {
+            git config --worktree advice.detachedHead false
+            git config --worktree core.hooksPath /dev/null || echo 'FAILED: git config --worktree core.hooksPath /dev/null'
+
+            echo ".local-repo-id" >> "$(git rev-parse --git-dir)/info/exclude"
+          }
+          cd -
           return
           ;;
         [Nn])
           break
           ;;
       esac
-    done 
+    done
   fi
-  
-  
 
-#: since git worktree add --orphan is used, no more needed?
-#  if git rev-parse --verify HEAD >/dev/null 2>&1; then
-#    has_commit=1
-#  else
-#    has_commit=0
-#    echo "Needs at least one commit before git issue init"
-#    return 0
-#  fi
-  
+  #: since git worktree add --orphan is used, no more needed?
+  #  if git rev-parse --verify HEAD >/dev/null 2>&1; then
+  #    has_commit=1
+  #  else
+  #    has_commit=0
+  #    echo "Needs at least one commit before git issue init"
+  #    return 0
+  #  fi
 
   # Create orphan detached worktree
-  # git worktree add --detach "$root/.issues" 
+  # git worktree add --detach "$root/.issues"
   # cd "$root/.issues" || return 1
 
   tmp_ref="refs/issues/tmp/$(date +%s)-$$"
   #git worktree add --orphan -B temp_issues $root/.issues
-  git worktree add --orphan -B $tmp_ref $root/.issues  
+  git worktree add --orphan -B $tmp_ref $root/.issues
 
   mkdir -p $root/.issues/issues
-  
+
   git config --local extensions.worktreeConfig true || echo 'FAILED: git config --local extensions.worktreeConfig true'
-  cd $wt || { echo "failed to cd to issue worktree"; return 1; }
-  git config --worktree advice.detachedHead false 
+  cd $wt || {
+    echo "failed to cd to issue worktree"
+    return 1
+  }
+  git config --worktree advice.detachedHead false
   git config --worktree core.hooksPath /dev/null || echo 'FAILED: git config --worktree core.hooksPath /dev/null'
-  
+
   echo ".local-repo-id" >> "$(git rev-parse --git-dir)/info/exclude"
-  cat > .gitignore <<'EOF'
+  cat > .gitignore << 'EOF'
 # Ignore everything in issues/ except TEMPLATE.md 
 .local-repo-id
 EOF
 
-  cat > TEMPLATE.md <<'EOF'
+  cat > TEMPLATE.md << 'EOF'
 ---
 title:
 type: bug|feature|task|meta
@@ -239,31 +237,34 @@ severity: critical|high|medium|low
 ## Notes
 EOF
 
-#  cp TEMPLATE.md .issues/TEMPLATE.md
+  #  cp TEMPLATE.md .issues/TEMPLATE.md
 
-#  cat > issues/0001.md <<'EOF'
-#---
-#title: Initial issue tracking setup
-#type: meta
-#priority: low
-#---
-#
-#Issue tracking initialized.
-#EOF
+  #  cat > issues/0001.md <<'EOF'
+  #---
+  #title: Initial issue tracking setup
+  #type: meta
+  #priority: low
+  #---
+  #
+  #Issue tracking initialized.
+  #EOF
 
   git add .
   git commit -m "issue init: templates loaded"
   commit=$(git rev-parse HEAD)
-  
-  #git update-ref "$ISSUE_REF_PREFIX/$issue_id" 
+
+  #git update-ref "$ISSUE_REF_PREFIX/$issue_id"
   git update-ref refs/issues/latest $commit
 
   echo "Initialized issue tracking in .issues/"
-  
+
   git checkout --detach
   #git branch -D temp_issues
   git branch -D $tmp_ref
-  cd - || { echo "failed to restore the directory"; return 1; }
+  cd - || {
+    echo "failed to restore the directory"
+    return 1
+  }
 }
 
 parse_issue_id() {
@@ -285,29 +286,27 @@ parse_issue_id() {
       echo 'usage: git issue edit <id>'
       echo '  <id> should be alphbets-integers like PACMAN-0012, PACMAN-12, or PACMAN12'
       return 1
-    fi 
+    fi
   else
     if [[ "$id" =~ ^([[:alpha:]]+)([[:digit:]]+)$ ]]; then
-            id_left="${BASH_REMATCH[1]}"
-            id_right="${BASH_REMATCH[2]}"
-        else
-            echo "usage: git issue edit <id>"
-            echo '  <id> should be alphbets-integers like PACMAN-0012, PACMAN-12, or PACMAN12'
-            return 1
-        fi
+      id_left="${BASH_REMATCH[1]}"
+      id_right="${BASH_REMATCH[2]}"
+    else
+      echo "usage: git issue edit <id>"
+      echo '  <id> should be alphbets-integers like PACMAN-0012, PACMAN-12, or PACMAN12'
+      return 1
     fi
-    
+  fi
 
   #echo "$id_left" "$id_right"
   id_right=$(sed 's/^0*//' <<< "$id_right")
   # 012은 octal number 12로 인식되므로 10진수로 바꿔줘야 함
   id_right=$(printf "%04d" "$id_right")
   #echo "$id_left" "$id_right"
-  
+
   id="$id_left"-"$id_right"
   echo "$id"
 }
-
 
 git_issue_edit() {
 
@@ -320,22 +319,31 @@ git_issue_edit() {
   if ! safe_cd "$wt"; then
     return 1
   fi
-  
+
   #fn=$1
-  [ -z "$id" ] && { echo "usage: git issue edit <id>"; return 1; }
+  [ -z "$id" ] && {
+    echo "usage: git issue edit <id>"
+    return 1
+  }
 
   # if ! is_int "$id"; then echo 'usage: git issue show <id>'; echo '  <id> should be an integer'; return 1;
-  # else 
+  # else
   #   id=$(printf "%04d" $id)
   # fi
 
   editor=$(git var GIT_EDITOR) || return 1
 
   #mkdir -p "$(dirname "$file")"
-  [ -f "$path" ] || { echo "Issue $id not found"; return 1; }
+  [ -f "$path" ] || {
+    echo "Issue $id not found"
+    return 1
+  }
 
   #${EDITOR:-vi} "$file"
-  sh -c "$editor \"$path\"" || { echo "editor failed"; return 1; }
+  sh -c "$editor \"$path\"" || {
+    echo "editor failed"
+    return 1
+  }
 
   # if cmp -s "$file" "$root/.issues/TEMPLATE.md"; then
   #   echo "No changes made to issue $file"
@@ -346,7 +354,7 @@ git_issue_edit() {
   #   else
   #     echo "Keeping template issue file $file"
   #   fi
-  # else  
+  # else
   #   return 0
   # fi
 }
@@ -397,7 +405,10 @@ git_issue_new() {
     esac
   done
 
-  fn_md=$(new_filename ".md") || { echo "failed to generate new filename"; return 1; }
+  fn_md=$(new_filename ".md") || {
+    echo "failed to generate new filename"
+    return 1
+  }
 
   root=$(git_project_root)
   path="$wt/issues/$fn_md"
@@ -405,7 +416,7 @@ git_issue_new() {
   mkdir -p "$(dirname "$path")"
   # Validation (Optional)
   if [[ -z "$TITLE" ]]; then
-   [ -f "$path" ] || cp "$wt/TEMPLATE.md" "$path"
+    [ -f "$path" ] || cp "$wt/TEMPLATE.md" "$path"
     id=$(basename "$fn_md" .md)
     git_issue_edit "$id" || { return 1; }
     cd - || return 1
@@ -422,10 +433,9 @@ git_issue_new() {
     } > "$path"
     echo "Created new issue: issues/$fn_md"
     cd - || return 1
-  fi  
+  fi
 
 }
-
 
 git_issue_commit() {
   root=$(git_project_root)
@@ -433,7 +443,7 @@ git_issue_commit() {
   local wt
   wt=$(git_issue_worktree)
   if ! safe_cd "$wt"; then
-      return 1
+    return 1
   fi
 
   #if git diff --cached --quiet && git diff --quiet; then
@@ -441,8 +451,8 @@ git_issue_commit() {
   #  return 0
   #fi
 
-  if issue_merge_in_progress;  then
-    echo "merge in progress; use git issue merge --continue"; 
+  if issue_merge_in_progress; then
+    echo "merge in progress; use git issue merge --continue"
     #git_issue_status;
     return 1
   fi
@@ -456,12 +466,16 @@ git_issue_commit() {
   #fi
 
   git commit "$@"
-  [ $? -ne 0 ] && { echo "issue commit failed"; git restore --staged issues/; cd -; return 1; }
+  [ $? -ne 0 ] && {
+    echo "issue commit failed"
+    git restore --staged issues/
+    cd -
+    return 1
+  }
 
   git update-ref refs/issues/latest HEAD
   cd - || return 1
 }
-
 
 git_issue_log() {
   root="$(git_project_root)"
@@ -478,15 +492,13 @@ git_issue_log() {
     esac
   done
 
-
-
   [ -z "$remote_tracking" ] && remote_tracking=$(resolve_issue_remote)
 
   if [[ $audit -eq 1 ]]; then
 
     #cd $wt && local_id=$(secure_repo_id)
     echo '> audit log'
-    local_id="$(cat "$wt/.local-repo-id" 2>/dev/null )"
+    local_id="$(cat "$wt/.local-repo-id" 2> /dev/null)"
     # if [[ ! -f "$wt/.local-repo-id" ]]; then
     #   echo '!E: local-repo-id not found or can'\''t be generated'
     #   return 1
@@ -505,7 +517,7 @@ git_issue_log() {
       --glob='refs/issues/audit/*' \
       HEAD refs/issues/latest refs/remotes/"$remote_tracking"/issues/latest \
       $@ #\
-      #--decorate-refs=refs/issues/audit/"$local_id"
+    #--decorate-refs=refs/issues/audit/"$local_id"
   else
     git -C "$root/.issues" log --oneline --graph \
       --decorate-refs=HEAD \
@@ -514,13 +526,13 @@ git_issue_log() {
       --decorate-refs-exclude=refs/heads/* \
       HEAD refs/issues/latest refs/remotes/"$remote_tracking"/issues/latest \
       $@ #\
-      #--decorate-refs=refs/issues/audit/"$local_id"
+    #--decorate-refs=refs/issues/audit/"$local_id"
   fi
 }
 
 # git_issue_list() {
 #   root=$(git_project_root)
-  
+
 #   [ ! -d "$root/.issues" ] && echo ".issue not found. Use \`git issue init\` to make one" && return 1
 #   ls "$root/.issues/issues" | sed 's/\.md$//'
 # }
@@ -528,34 +540,37 @@ git_issue_log() {
 git_issue_show() {
   id="$(parse_issue_id "$1")" || return 1
   [ -z "$id" ] && echo "usage: git issue show <id>" && return 1
-  
+
   #if ! is_int "$id"; then echo 'usage: git issue show <id>'; echo '  <id> should be an integer'; return 1;
-  #else 
-    #id=$(printf "%04d" $id)
-    root=$(git_project_root)
-    file="$root/.issues/issues/$id.md"
+  #else
+  #id=$(printf "%04d" $id)
+  root=$(git_project_root)
+  file="$root/.issues/issues/$id.md"
 
-    [ -f "$file" ] || { echo "Issue $id not found"; return 1; }
+  [ -f "$file" ] || {
+    echo "Issue $id not found"
+    return 1
+  }
 
-    echo "ISSUE-FILE: issues/$id.md"
-    sed -n '1,200p' "$file"
+  echo "ISSUE-FILE: issues/$id.md"
+  sed -n '1,200p' "$file"
   #fi
 }
 
 git_issue_list() {
-    root=$(git_project_root)
-    issues_dir="$root/.issues/issues" || return 1
-  
-    # check the folder .issues/
-    [ ! -d "$root/.issues" ] && echo ".issue not found. Use \`git issue init\` to create new one and \`git issue clone\` to clone the remote issues" && return 1
+  root=$(git_project_root)
+  issues_dir="$root/.issues/issues" || return 1
 
-    printf "%-13s %-8s %-8s %-8s %s\n" "ID" "STATUS" "TYPE" "PRI" "TITLE"
+  # check the folder .issues/
+  [ ! -d "$root/.issues" ] && echo ".issue not found. Use \`git issue init\` to create new one and \`git issue clone\` to clone the remote issues" && return 1
 
-    while IFS= read -r -d '' f; do
-        [ -f "$f" ] || continue
-        id=$(basename "$f" .md)
+  printf "%-13s %-8s %-8s %-8s %s\n" "ID" "STATUS" "TYPE" "PRI" "TITLE"
 
-        awk -v id="$id" '
+  while IFS= read -r -d '' f; do
+    [ -f "$f" ] || continue
+    id=$(basename "$f" .md)
+
+    awk -v id="$id" '
             BEGIN {
                 in_yaml = 0
                 title = type = pri = status = ""
@@ -585,128 +600,140 @@ git_issue_list() {
                        title  ? title  : "-"
             }
         ' "$f"
-    done < <(find "$issues_dir" -maxdepth 1 -name "*.md" -type f -printf '%T@ %p\0' | sort -zrn | cut -zd' ' -f2-)
-    
+  done < <(find "$issues_dir" -maxdepth 1 -name "*.md" -type f -printf '%T@ %p\0' | sort -zrn | cut -zd' ' -f2-)
 
 }
 
-
 upper() {
-    printf "%s" "$1" | tr '[:lower:]' '[:upper:]'
+  printf "%s" "$1" | tr '[:lower:]' '[:upper:]'
 }
 
 truncate() {
-    max=$1
-    shift
-    s="$*"
-    [ "${#s}" -le "$max" ] && printf "%s" "$s" ||
-        printf "%s…" "${s:0:max}"
+  max=$1
+  shift
+  s="$*"
+  [ "${#s}" -le "$max" ] && printf "%s" "$s" ||
+    printf "%s…" "${s:0:max}"
 }
 
 rel_time() {
-    delta=$1  # seconds
-    
-    if [ "$delta" -lt 3600 ]; then
-        printf -- "<   %2dM" $((delta / 60 + 1))
-    elif [ "$delta" -lt 86400 ]; then
-        printf -- "<   %2dH" $((delta / 3600 + 1))
-    elif [ "$delta" -lt 2592000 ]; then
-        printf -- "<  %2dd " $((delta / 86400 + 1))
-    elif [ "$delta" -lt 31536000 ]; then
-        printf -- "< %2dm  " $((delta / 2592000 + 1))
-    else
-        printf -- "< %2dy  " $((delta / 31536000 + 1))
-    fi
+  delta=$1 # seconds
+
+  if [ "$delta" -lt 3600 ]; then
+    printf -- "<   %2dM" $((delta / 60 + 1))
+  elif [ "$delta" -lt 86400 ]; then
+    printf -- "<   %2dH" $((delta / 3600 + 1))
+  elif [ "$delta" -lt 2592000 ]; then
+    printf -- "<  %2dd " $((delta / 86400 + 1))
+  elif [ "$delta" -lt 31536000 ]; then
+    printf -- "< %2dm  " $((delta / 2592000 + 1))
+  else
+    printf -- "< %2dy  " $((delta / 31536000 + 1))
+  fi
 }
 
 priority_char() {
-    case "$1" in
+  case "$1" in
     "P1") PRI_MAP="1 " ;;
     "P2") PRI_MAP=" 2 " ;;
     "P3") PRI_MAP="  3" ;;
-    *)    PRI_MAP="  ?" ;; # Default for unknown values
-    esac
-    
-    echo "$PRI_MAP"
+    *) PRI_MAP="  ?" ;; # Default for unknown values
+  esac
+
+  echo "$PRI_MAP"
 }
 
 git_issue_list_full() {
-    root=$(git_project_root)
-    issues_rootdir="$root/.issues" || return 1
-    issues_dir="$root/.issues/issues" || return 1
-    wt=$(git_issue_worktree)
-    if ! safe_cd "$wt"; then
-      return 1
-    fi # This is safter and the following cd
-    # safe_cd "$issues_rootdir" || return 1
-    
-    #                 TYPE PRI  TITLE CHANGED
-    printf "%-11s %-2s %-4s %-3s %-40s %-7s %-35s %s\n" \
-        "ID" "ST" "TYPE" "PRI" "TITLE" "CHANGED" "COMMIT" "CMT_TIME"
+  root=$(git_project_root)
+  issues_rootdir="$root/.issues" || return 1
+  issues_dir="$root/.issues/issues" || return 1
+  wt=$(git_issue_worktree)
+  if ! safe_cd "$wt"; then
+    return 1
+  fi # This is safter and the following cd
+  # safe_cd "$issues_rootdir" || return 1
 
-    for f in "$issues_dir"/*.md; do
-        [ -f "$f" ] || continue
+  #                 TYPE PRI  TITLE CHANGED
+  printf "%-11s %-2s %-4s %-3s %-40s %-7s %-35s %s\n" \
+    "ID" "ST" "TYPE" "PRI" "TITLE" "CHANGED" "COMMIT" "CMT_TIME"
 
-        id=$(basename "$f" .md)
-        rel="issues/$id.md"
+  for f in "$issues_dir"/*.md; do
+    [ -f "$f" ] || continue
 
-        # -------- frontmatter --------
-        # Read into variables without eval to avoid command injection
-        while IFS= read -r line; do
-            case "$line" in
-                status:*)   status="${line#status:}" ; status="${status#"${status%%[![:space:]]*}"}" ;;
-                type:*)     type="${line#type:}" ; type="${type#"${type%%[![:space:]]*}"}" ;;
-                priority:*) pri="${line#priority:}" ; pri="${pri#"${pri%%[![:space:]]*}"}" ;;
-                title:*)    title="${line#title:}" ; title="${title#"${title%%[![:space:]]*}"}" ;;
-            esac
-        done < <(awk '
+    id=$(basename "$f" .md)
+    rel="issues/$id.md"
+
+    # -------- frontmatter --------
+    # Read into variables without eval to avoid command injection
+    while IFS= read -r line; do
+      case "$line" in
+        status:*)
+          status="${line#status:}"
+          status="${status#"${status%%[![:space:]]*}"}"
+          ;;
+        type:*)
+          type="${line#type:}"
+          type="${type#"${type%%[![:space:]]*}"}"
+          ;;
+        priority:*)
+          pri="${line#priority:}"
+          pri="${pri#"${pri%%[![:space:]]*}"}"
+          ;;
+        title:*)
+          title="${line#title:}"
+          title="${title#"${title%%[![:space:]]*}"}"
+          ;;
+      esac
+    done < <(awk '
             BEGIN { in_yaml = 0 }
             /^---$/ { in_yaml = !in_yaml; next }
             in_yaml && /^(status|type|priority|title):/ { print }
         ' "$f")
 
-        ST=$(upper "${status:-??}"); ST=${ST:0:2}
-        TYPE=$(upper "${type:-????}"); TYPE=${TYPE:0:4}
-        PRI=$(upper "${pri:-???}"); PRI=${PRI:0:3}
-        TITLE=$(truncate 39 "${title:-}")
-        
-        PRI_MAP=$(priority_char "$PRI")
+    ST=$(upper "${status:-??}")
+    ST=${ST:0:2}
+    TYPE=$(upper "${type:-????}")
+    TYPE=${TYPE:0:4}
+    PRI=$(upper "${pri:-???}")
+    PRI=${PRI:0:3}
+    TITLE=$(truncate 39 "${title:-}")
 
-        # -------- dirty / changed --------
-        if git status --porcelain -- "$rel" | grep -q .; then
-            now=$(date +%s)
-            mtime=$(stat -c %Y "$f" 2>/dev/null || stat -f %m "$f")
-            delta=$((now - mtime))
-            CHANGED=$(rel_time "$delta") 
-        else
-            CHANGED=""
-        fi
+    PRI_MAP=$(priority_char "$PRI")
 
-        # -------- last commit --------
-        read -r cdate ctime cmsg <<EOF
-$(git log -1 --pretty=format:'%cd %s' --date=format:'%Y-%m-%d %H:%M' -- "$rel" 2>/dev/null)
+    # -------- dirty / changed --------
+    if git status --porcelain -- "$rel" | grep -q .; then
+      now=$(date +%s)
+      mtime=$(stat -c %Y "$f" 2> /dev/null || stat -f %m "$f")
+      delta=$((now - mtime))
+      CHANGED=$(rel_time "$delta")
+    else
+      CHANGED=""
+    fi
+
+    # -------- last commit --------
+    read -r cdate ctime cmsg << EOF
+$(git log -1 --pretty=format:'%cd %s' --date=format:'%Y-%m-%d %H:%M' -- "$rel" 2> /dev/null)
 EOF
-        
-        COMMIT=$(truncate 34 "$cmsg")
-        CMT_TIME=${cdate%:*}
 
-        printf "%-11s %-2s %-4s %-3s %-40s %-7s %-35s %s\n" \
-            "$id" "$ST" "$TYPE" "$PRI_MAP" "$TITLE" "$CHANGED" "$COMMIT" "$CMT_TIME"
-    done | sort
-    echo '==============================='
-    echo '* '"CHANGED: relative time since last modification(uncommitted changes)"
-    cd - > /dev/null || return 1
+    COMMIT=$(truncate 34 "$cmsg")
+    CMT_TIME=${cdate%:*}
+
+    printf "%-11s %-2s %-4s %-3s %-40s %-7s %-35s %s\n" \
+      "$id" "$ST" "$TYPE" "$PRI_MAP" "$TITLE" "$CHANGED" "$COMMIT" "$CMT_TIME"
+  done | sort
+  echo '==============================='
+  echo '* '"CHANGED: relative time since last modification(uncommitted changes)"
+  cd - > /dev/null || return 1
 }
 
 #git_issue_list_full
-
 
 git_issue_search() {
   local pat=
   local title_pat=
   local body_pat=
   local ignore_case=0
-  
+
   root=$(git_project_root)
   issues_rootdir="$root/.issues" || return 1
   issues_dir="$root/.issues/issues" || return 1
@@ -715,8 +742,8 @@ git_issue_search() {
   for arg in "$@"; do
     case $arg in
       --title=*) title_pat=${arg#*=} ;;
-      --body=*)  body_pat=${arg#*=} ;;
-      -i)        ignore_case=1 ;;
+      --body=*) body_pat=${arg#*=} ;;
+      -i) ignore_case=1 ;;
       *)
         pat=$arg
         ;;
@@ -724,9 +751,9 @@ git_issue_search() {
   done
 
   awk -v pat="$pat" \
-      -v title_pat="$title_pat" \
-      -v body_pat="$body_pat" \
-      -v icase="$ignore_case" '
+    -v title_pat="$title_pat" \
+    -v body_pat="$body_pat" \
+    -v icase="$ignore_case" '
 
   function finish_file() {
     match_file = 1
@@ -804,12 +831,7 @@ git_issue_search() {
   ' "$issues_dir"/*.md
 }
 
-
-
 #git_issue_search Hi
-
-
-
 
 resolve_issue_remote() {
   # 1. explicit CLI remote already handled by caller
@@ -817,18 +839,27 @@ resolve_issue_remote() {
   # 2. issue.remote
   local r
   r=$(git config --get issue.remote)
-  [ -n "$r" ] && { echo "$r"; return; }
+  [ -n "$r" ] && {
+    echo "$r"
+    return
+  }
 
   # 3. remote.pushDefault
   r=$(git config --get remote.pushDefault)
-  [ -n "$r" ] && { echo "$r"; return; }
+  [ -n "$r" ] && {
+    echo "$r"
+    return
+  }
 
   # 4. branch upstream (only if on branch)
   local branch
-  branch=$(git symbolic-ref --quiet --short HEAD 2>/dev/null)
+  branch=$(git symbolic-ref --quiet --short HEAD 2> /dev/null)
   if [ -n "$branch" ]; then
     r=$(git config --get branch.$branch.remote)
-    [ -n "$r" ] && { echo "$r"; return; }
+    [ -n "$r" ] && {
+      echo "$r"
+      return
+    }
   fi
 
   # 5. fallback
@@ -841,11 +872,9 @@ resolve_issue_remote() {
 #   echo origin
 # }
 
-
-
 git_issue_track() {
   #[ $# -eq 1 ] || { echo "usage: git issue track <remote>"; return 1; }
-  if [ "$#" -gt  1 ]; then
+  if [ "$#" -gt 1 ]; then
     echo "usage: git issue track (<remote>|--unset)"
     return 1
   fi
@@ -856,20 +885,29 @@ git_issue_track() {
     # from function resolve_issue_remote
     local r
     r=$(git config --get issue.remote)
-    [ -n "$r" ] && { echo "Currently tracking $r"; return; }
-    
+    [ -n "$r" ] && {
+      echo "Currently tracking $r"
+      return
+    }
+
     echo "Tracking remote is not set."
 
-        # 3. remote.pushDefault
+    # 3. remote.pushDefault
     r=$(git config --get remote.pushDefault)
-    [ -n "$r" ] && { echo "- remote.pushDefault set to $r"; return; }
+    [ -n "$r" ] && {
+      echo "- remote.pushDefault set to $r"
+      return
+    }
 
     # 4. branch upstream (only if on branch)
     local branch
-    branch=$(git symbolic-ref --quiet --short HEAD 2>/dev/null)
+    branch=$(git symbolic-ref --quiet --short HEAD 2> /dev/null)
     if [ -n "$branch" ]; then
       r=$(git config --get branch.$branch.remote)
-      [ -n "$r" ] && { echo "- branch.CURRENT_BRANCH($branch).remote set to $r"; return; }
+      [ -n "$r" ] && {
+        echo "- branch.CURRENT_BRANCH($branch).remote set to $r"
+        return
+      }
     fi
 
     # 5. fallback
@@ -877,31 +915,33 @@ git_issue_track() {
 
     return 1
   fi
-  
+
   if [ "$#" -eq 1 ]; then
     local remote=$1
 
     if [ "$remote" = "--unset" ]; then
-      git config --unset issue.remote \
-      || { echo "failed to unset issue.remote"; return 1; }
+      git config --unset issue.remote ||
+        {
+          echo "failed to unset issue.remote"
+          return 1
+        }
     fi
 
     # check remote exists
-    if ! git ls-remote --exit-code "$remote" >/dev/null 2>&1; then
+    if ! git ls-remote --exit-code "$remote" > /dev/null 2>&1; then
       echo "remote '$remote' not found"
       return 1
     fi
 
-    git config issue.remote "$remote" \
-      || { echo "failed to set issue.remote"; return 1; }
+    git config issue.remote "$remote" ||
+      {
+        echo "failed to set issue.remote"
+        return 1
+      }
 
     echo "Issues now track remote '$remote'"
   fi
 }
-
-
-
-
 
 # Original
 # git_issue_push() {
@@ -951,15 +991,15 @@ git_issue_push() {
   remote=${remote:-$(resolve_issue_remote)}
   url_remote="$(git remote get-url --push "$remote")"
 
-  if [[ ! ( "$url_remote" =~ ^file:// || \
-            "$url_remote" =~ ^ssh:// || \
-            "$url_remote" =~ ^git:// ||
-            "$url_remote" =~ ^https:// ||
-            "$url_remote" =~ ^http:// ) ]]; then
+  if [[ ! ("$url_remote" =~ ^file:// ||
+    "$url_remote" =~ ^ssh:// ||
+    "$url_remote" =~ ^git:// ||
+    "$url_remote" =~ ^https:// ||
+    "$url_remote" =~ ^http://) ]]; then
 
     if ! is_git_scp_like_host_path "$url_remote"; then # not scp-like
-      if [[ ! "$url_remote" = /* ]]; then # not absolute path
-        local root 
+      if [[ ! "$url_remote" = /* ]]; then              # not absolute path
+        local root
         root="$(git_project_root)"
         echo '!W: Relative local paths would not work for worktree.'
         echo '    If it failes, try delete and create '"$remote"' again using the following:'
@@ -978,21 +1018,27 @@ git_issue_push() {
   L=$(issue_ref)
   R=$(remote_issue_ref "$remote")
 
-# ! replace die
-#   replace die "([^"]+)"
-#   with { echo "$1"; return 1; }
+  # ! replace die
+  #   replace die "([^"]+)"
+  #   with { echo "$1"; return 1; }
 
   # ensure local ref exists
-  git show-ref --verify --quiet "$L" \
-    || { echo "no local issue snapshot ($L)"; return 1; }
+  git show-ref --verify --quiet "$L" ||
+    {
+      echo "no local issue snapshot ($L)"
+      return 1
+    }
 
   # fetch remote state for safety check
   # git_issue_fetch "$remote"
   #commnted: isolate fetch from push
 
   if [ $force -eq 0 ] && git show-ref --verify --quiet "$R"; then
-    git merge-base --is-ancestor "$R" "$L" \
-      || { echo "remote issues have advanced; do "git issue fetch" first"; return 1; }
+    git merge-base --is-ancestor "$R" "$L" ||
+      {
+        echo "remote issues have advanced; do "git issue fetch" first"
+        return 1
+      }
   fi
 
   if git push "$remote" "$L:$L"; then
@@ -1003,16 +1049,15 @@ git_issue_push() {
       echo "- Failed to update local snapshot"
     fi
   else
-    echo "- Push failed"; return 1; 
+    echo "- Push failed"
+    return 1
   fi
-
 
   if [ $set_upstream -eq 1 ]; then
     git config issue.remote "$remote"
     echo "Tracking remote set to '$remote'"
   fi
 }
-
 
 git_issue_fetch() {
   local remote=
@@ -1053,24 +1098,23 @@ git_issue_fetch() {
   if [ "$LOCAL_SHA" = "$REMOTE_SHA" ]; then
     echo "Nothing to fetch: local remote-tracking issue snapshot is up-to-date with '$remote'"
     return 0
-  fi 
-
+  fi
 
   git fetch "${opts[@]}" "$remote" \
-    "$(issue_ref):$(remote_issue_ref "$remote")" \
-    || { echo "fetch failed"; return 1; }
+    "$(issue_ref):$(remote_issue_ref "$remote")" ||
+    {
+      echo "fetch failed"
+      return 1
+    }
 }
-
 
 # clone-issue workflow:
 # 1. git issue fetch
 # 2. git worktree add .issues/ origin/issues/latest
 # 3. git issue list
 
-
-
 issue_merge_in_progress() {
-  issue_git rev-parse -q --verify MERGE_HEAD >/dev/null 2>&1
+  issue_git rev-parse -q --verify MERGE_HEAD > /dev/null 2>&1
 }
 
 git_issue_merge() {
@@ -1122,14 +1166,23 @@ git_issue_merge() {
   local_ref=$(issue_ref)
   remote_ref=$(remote_issue_ref "$remote")
 
-  issue_git show-ref --verify --quiet "$local_ref" \
-    || { echo "no local issue snapshot"; return 1; }
+  issue_git show-ref --verify --quiet "$local_ref" ||
+    {
+      echo "no local issue snapshot"
+      return 1
+    }
 
-  issue_git show-ref --verify --quiet "$remote_ref" \
-    || { echo "no remote issue snapshot for '$remote'"; return 1; }
+  issue_git show-ref --verify --quiet "$remote_ref" ||
+    {
+      echo "no remote issue snapshot for '$remote'"
+      return 1
+    }
 
   (
-    cd "$wt" || { echo "failed to enter issue worktree $wt"; return 1; }
+    cd "$wt" || {
+      echo "failed to enter issue worktree $wt"
+      return 1
+    }
 
     case $mode in
       --abort)
@@ -1140,7 +1193,10 @@ git_issue_merge() {
       --continue)
         if [ -f "$(git rev-parse --git-dir)"/MERGE_HEAD ]; then
           git add issues
-          git commit || { echo "commit failed"; return 1; }
+          git commit || {
+            echo "commit failed"
+            return 1
+          }
           git update-ref "$local_ref" HEAD
           return 0
         else
@@ -1175,9 +1231,8 @@ git_issue_merge() {
       done
       opts=("${new_opts[@]}")
 
-
       if [[ $ff -eq 1 ]]; then
-        git merge --ff "${opts[@]}" "$remote_oid" 
+        git merge --ff "${opts[@]}" "$remote_oid"
       else
         git merge "${opts[@]}" "$remote_oid"
       fi
@@ -1192,7 +1247,7 @@ git_issue_merge() {
       # to preserve the original commits
       ref_audit="$(issue_audit_ref)"/pre-rebase-"$(date +%y%m%d%H%M)"
       git update-ref "$ref_audit" HEAD
-    fi  
+    fi
     if [[ $rebase -eq 1 ]]; then
       if output=$(git rebase "$remote_oid" 2>&1); then
         echo "$output"
@@ -1237,7 +1292,6 @@ git_issue_merge() {
   )
 }
 
-
 git_issue_status() {
   local wt
   wt=$(git_issue_worktree)
@@ -1245,7 +1299,7 @@ git_issue_status() {
   (
     #cd "$wt" 2> /dev/null || { echo 'E: .issues not yet initiated.'; echo '  - use "git issue init" and "git issue pull"'; return 1; }
     if ! safe_cd "$wt"; then
-        return 1
+      return 1
     fi
 
     issue_gitdir=$(git rev-parse --git-dir)
@@ -1265,12 +1319,12 @@ git_issue_status() {
     remote_tracking=$(git config --get issue.remote)
     remote_tracking=${remote_tracking:-$(resolve_issue_remote)}
     if [ -n "$remote_tracking" ]; then
-      #echo "$remote_tracking"  
+      #echo "$remote_tracking"
 
       local local_oid remote_oid
       local_oid=$(git rev-parse "$(issue_ref)")
       #remote_oid=$(git rev-parse "$(remote_issue_ref "$remote_tracking")" 2>/dev/null)
-      if ! remote_oid=$(git rev-parse "$(remote_issue_ref "$remote_tracking")" 2>/dev/null );  then
+      if ! remote_oid=$(git rev-parse "$(remote_issue_ref "$remote_tracking")" 2> /dev/null); then
         echo "No remote issue snapshot for '$remote_tracking'"
         #return 1
       elif [ -n "$remote_oid" ]; then
@@ -1281,7 +1335,7 @@ git_issue_status() {
             "$(git rev-list --count "$local_oid..$remote_oid")"
         elif git merge-base --is-ancestor "$remote_oid" "$local_oid"; then
           printf "Issues ahead of tracking remote $remote_tracking by %s commits\n" \
-            "$( git rev-list --count "$remote_oid..$local_oid")"
+            "$(git rev-list --count "$remote_oid..$local_oid")"
         else
           printf "Issues diverged: Ahead %s, Behind %s\n" \
             "$(git rev-list --count "$remote_oid..$local_oid")" \
@@ -1296,9 +1350,7 @@ git_issue_status() {
     #   [ -n "$(git ls-files --others --exclude-standard)" ]; then
     #   echo "No changes since last commit"
     # else
-      git status --short
+    git status --short
     # fi
   )
 }
-
-
