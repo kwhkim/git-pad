@@ -1075,8 +1075,10 @@ issue_merge_in_progress() {
 
 git_issue_merge() {
   local mode=
+  local rebase=0
   local remote=
   local opts=()
+  local audit=0
 
   for arg in "$@"; do
     case "$arg" in
@@ -1094,6 +1096,12 @@ git_issue_merge() {
           return 1
         fi
         mode="--continue"
+        ;;
+      --rebase)
+        rebase=1
+        ;;
+      --audit)
+        audit=1
         ;;
       -*)
         opts+=("$arg")
@@ -1125,7 +1133,8 @@ git_issue_merge() {
 
     case $mode in
       --abort)
-        git rebase --abort 2>/dev/null || git merge --abort
+        #git rebase --abort 2>/dev/null || git merge --abort
+        git merge --abort
         return 0
         ;;
       --continue)
@@ -1179,14 +1188,29 @@ git_issue_merge() {
 
     #output=$(git rebase "$remote_oid" 2>&1)
     #if [ $? -eq 0 ]; then
-    if output=$(git rebase "$remote_oid" 2>&1); then
-      echo "$output"
-      git update-ref "$local_ref" HEAD
-      return 0
+    if [[ $audit -eq 1 ]]; then
+      # to preserve the original commits
+      ref_audit="$(issue_audit_ref)"/pre-rebase-"$(date +%y%m%d%H%M)"
+      git update-ref "$ref_audit" HEAD
+    fi  
+    if [[ $rebase -eq 1 ]]; then
+      if output=$(git rebase "$remote_oid" 2>&1); then
+        echo "$output"
+        git update-ref "$local_ref" HEAD
+
+        return 0
+      else
+        echo "rebase failed, falling back to merge..."
+        git update-ref -d "$ref_audit"
+        git rebase --abort > /dev/null 2>&1
+        if git merge "${opts[@]}" "$remote_oid"; then
+          git update-ref "$local_ref" HEAD
+          return 0
+        fi
+      fi
     else
-      echo "rebase failed, falling back to merge..."
-      git rebase --abort > /dev/null 2>&1
-      if git merge "${opts[@]}" "$remote_oid"; then
+      if output=$(git merge "$remote_oid" 2>&1); then
+        echo "$output"
         git update-ref "$local_ref" HEAD
         return 0
       fi
