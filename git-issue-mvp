@@ -435,8 +435,10 @@ git_issue_commit() {
   #  return 0
   #fi
 
-  if [ -f .git/MERGE_HEAD ]; then
-    echo "merge in progress; use git issue merge --continue"; return 1
+  if issue_merge_in_progress;  then
+    echo "merge in progress; use git issue merge --continue"; 
+    #git_issue_status;
+    return 1
   fi
 
   git add issues
