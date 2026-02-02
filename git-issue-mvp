@@ -1031,6 +1031,31 @@ git_issue_fetch() {
 
   remote=${remote:-$(resolve_issue_remote)}
 
+  local local_ref remote_ref
+  local_ref=$(issue_ref)
+  remote_ref=$(remote_issue_ref "$remote")
+
+  # issue_git show-ref --verify --quiet "$local_ref" \
+  #   || { echo "no local issue snapshot"; return 1; }
+
+  # issue_git show-ref --verify --quiet "$remote_ref" \
+  #   || { echo "no remote issue snapshot for '$remote'"; return 1; }
+
+  REMOTE_SHA=$(git ls-remote "$remote" "$local_ref" | cut -f1)
+  if [ -z "$REMOTE_SHA" ]; then
+    echo "remote issue snapshot not found on '$remote'"
+    return 1
+  fi
+
+  LOCAL_SHA=$(git rev-parse "$remote_ref")
+  #echo "$REMOTE_SHA"
+
+  if [ "$LOCAL_SHA" = "$REMOTE_SHA" ]; then
+    echo "Nothing to fetch: local remote-tracking issue snapshot is up-to-date with '$remote'"
+    return 0
+  fi 
+
+
   git fetch "${opts[@]}" "$remote" \
     "$(issue_ref):$(remote_issue_ref "$remote")" \
     || { echo "fetch failed"; return 1; }
