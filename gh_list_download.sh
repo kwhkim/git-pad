@@ -136,7 +136,6 @@ while :; do
   max_cov=$(jq -r '.updated_at_max' <<< "$state_gh_list")
   repo_created=$(jq -r '.repo_created_at' <<< "$state_gh_list")
 
-
   # ---- fetch repo createdAt once ----
   if [[ "$repo_created" == "" ]]; then
     # shellcheck disable=SC2016
@@ -179,7 +178,13 @@ while :; do
     SLICE_MINUTES_FORWARD=0
     direction="backward"
     until="$min_cov"
+    if [[ "$(date -u -d "$repo_created" +%s)" -gt "$(date -u -d "$until" +%s)" ]]; then
+      echo "- Reached repository creation date. Finished all scans."
+      break
+    fi
+
     since=$(date -u -d "$until - $SLICE_MINUTES_BACKWARD minutes" +"%Y-%m-%dT%H:%M:%SZ" 2> /dev/null || die "date calc error 2")
+
   fi
 
   echo "- Scan $direction : $since → $until"
@@ -220,8 +225,9 @@ while :; do
     has_next_page=$(echo "$resp" | jq -r '.data.repository.issues.pageInfo.hasNextPage')
     cursor=$(echo "$resp" | jq -r '.data.repository.issues.pageInfo.endCursor')
 
-    echo "- Writing response to resp.txt ..."
-    echo "$resp" > resp.txt
+    # DEBUG:
+    #echo "- Writing response to resp.txt ..."
+    #echo "$resp" > resp.txt
 
     if [ -f insert.sql ]; then rm insert.sql; fi
     #i=1
@@ -239,7 +245,8 @@ while :; do
       ncomments="$(jq -r '.comments.totalCount' <<< "$row")"
       title=$(sed "s/'/''/g" <<< "$title")
 
-      echo "$number|$id|$updated_at|$title"
+      # DEBUG:
+      #echo "$number|$id|$updated_at|$title"
 
       if [[ "$direction" == "forward" ]]; then
         if [[ "$updated_at" < "$since" || "$updated_at" > "$until" ]]; then
