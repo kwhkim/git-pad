@@ -1,0 +1,10 @@
+OWNER=pandas-dev
+REPO=pandas
+REPO_KEY="$OWNER/$REPO"
+SLICE_MINUTES_FORWARD1=$((60 * 24 * 3)) # 3 day
+SLICE_MINUTES_FORWARD2=30
+SLICE_MINUTES_BACKWARD=$((60 * 24 * 30)) # 30 days
+SPAN_MINUTES_RECENT=$((60 * 24 * 7))     # 7 days
+SHARD_SIZE=1000
+DB_FILE="gh_list.db"
+DB_STATE_FILE="gh_list_state.json"

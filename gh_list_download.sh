@@ -1,14 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-OWNER=pandas-dev
-REPO=pandas
-REPO_KEY="$OWNER/$REPO"
-SLICE_MINUTES_FORWARD1=300
-SLICE_MINUTES_FORWARD2=30
-SLICE_MINUTES_BACKWARD=$((60 * 24 * 30)) # 30 days
-SPAN_MINUTES_RECENT=$((60 * 24 * 7))     # 7 days
-SHARD_SIZE=1000
+# shellcheck source=/dev/null
+source gh_list_vars.sh
 
 die() {
   echo "[!] $*" >&2
@@ -18,7 +12,7 @@ die() {
 now_utc() { date -u +"%Y-%m-%dT%H:%M:%SZ"; }
 
 echo "- create table if not exists..."
-sqlite3 issues.db << 'SQL'
+sqlite3 "$DB_FILE" << 'SQL'
 PRAGMA journal_mode=WAL;
 PRAGMA synchronous=NORMAL;
 
@@ -114,15 +108,25 @@ EOF
 )
 
 #echo "- GQL: " "$GQL"
+state_gh_list=$(jq '.' "$DB_STATE_FILE")
+processing_already=$(jq -r '.processing' <<< "$state_gh_list")
+if [[ "$processing_already" == "true" ]]; then
+  echo "Another process is already running. Exiting."
+  exit 1
+else
+  state_gh_list=$(jq '.processing="true"' <<< "$state_gh_list")
+  echo "$state_gh_list" > "$DB_STATE_FILE"
+fi
 
 while :; do
   echo "===="
   # ---- load state ----
-  state_gh_list=$(jq '.' state.json)
+  state_gh_list=$(jq '.' "$DB_STATE_FILE")
 
   min_cov=$(jq -r '.updated_at_min' <<< "$state_gh_list")
   max_cov=$(jq -r '.updated_at_max' <<< "$state_gh_list")
   repo_created=$(jq -r '.repo_created_at' <<< "$state_gh_list")
+
 
   # ---- fetch repo createdAt once ----
   if [[ "$repo_created" == "" ]]; then
@@ -248,7 +252,7 @@ while :; do
     done < <(echo "$resp" | jq -c '.data.repository.issues.nodes[]')
 
     if [ -f insert.sql ]; then
-      sqlite3 issues.db < insert.sql
+      sqlite3 "$DB_FILE" < insert.sql
       echo "- Record response to SQLite. done."
     else
       echo '- Nothing to SQLite'
@@ -299,8 +303,8 @@ while :; do
   fi
 
   # ---- update coverage ----
-  new_min=$(sqlite3 issues.db "SELECT min(updated_at) FROM issues;")
-  new_max=$(sqlite3 issues.db "SELECT max(updated_at) FROM issues;")
+  new_min=$(sqlite3 "$DB_FILE" "SELECT min(updated_at) FROM issues;")
+  new_max=$(sqlite3 "$DB_FILE" "SELECT max(updated_at) FROM issues;")
 
   echo "  - New coverage in DB: $new_min → $new_max"
 
@@ -330,6 +334,11 @@ while :; do
   state_gh_list=$(jq --arg a "$min_cov" --arg b "$max_cov" \
     '.updated_at_min=$a | .updated_at_max=$b' <<< "$state_gh_list")
 
-  echo "$state_gh_list" > state.json
+  echo "$state_gh_list" > "$DB_STATE_FILE"
 
 done
+
+state_gh_list=$(jq '.' "$DB_STATE_FILE")
+state_gh_list=$(jq '.processing="false"' <<< "$state_gh_list")
+echo "$state_gh_list" > "$DB_STATE_FILE"
+echo "- Finished all scans."
