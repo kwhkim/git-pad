@@ -110,11 +110,20 @@ EOF
 #echo "- GQL: " "$GQL"
 state_gh_list=$(jq '.' "$DB_STATE_FILE")
 processing_already=$(jq -r '.processing' <<< "$state_gh_list")
-if [[ "$processing_already" == "true" ]]; then
-  echo "Another process is already running. Exiting."
-  exit 1
+if [[ "$processing_already" != "false" ]]; then
+  #echo "Another process is already running. Exiting."
+  #exit 1
+  if ps -p "$processing_already" > /dev/null; then
+    echo "Another process (PID: $processing_already) is already running. Exiting."
+    echo "- process = $(ps -p "$$" -o cmd=)"
+    exit 1
+  else
+    echo "Previous process (PID: $processing_already) not found. Continuing."
+    state_gh_list=$(jq '.processing='"$$" <<< "$state_gh_list")
+    echo "$state_gh_list" > "$DB_STATE_FILE"
+  fi
 else
-  state_gh_list=$(jq '.processing="true"' <<< "$state_gh_list")
+  state_gh_list=$(jq '.processing='"$$" <<< "$state_gh_list")
   echo "$state_gh_list" > "$DB_STATE_FILE"
 fi
 
