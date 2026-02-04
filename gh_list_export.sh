@@ -26,20 +26,11 @@ done
 #for i in {0..9}; do git worktree add --orphan -b gh0"$i" github/0"$i"; done
 #for i in {0..9}; do git worktree remove github/0"$i"; done
 
-BATCH_SIZE=10000
-offset=0
-
-# Get total count
-echo "Counting total issues..." >&2
-total=$(sqlite3 "$DB_FILE" "SELECT COUNT(*) FROM issues;")
-echo "Total issues: $total" >&2
-echo "" >&2
-
+#!/bin/bash
 
 BATCH_SIZE=10000
 offset=0
 
-# Get total count
 echo "Counting total issues..." >&2
 total=$(sqlite3 "$DB_FILE" "SELECT COUNT(*) FROM issues;")
 echo "Total issues: $total" >&2
@@ -52,30 +43,16 @@ while true; do
     
     echo "Fetching batch: rows $batch_start to $((offset + BATCH_SIZE))..." >&2
     
-    # Use process substitution to avoid subshell
     count=0
-    while IFS=$'\x1F' read -r id number title state created_at updated_at closed_at labels assignees comments; do
-        #echo -n "$number, "
-        {
-            echo "---"
-            echo "gh_issue_number: $number"
-            echo "title: $title"
-            echo "id: $id"
-            echo "created_at: $created_at"
-            echo "updated_at: $updated_at"
-            echo "closed_at: $closed_at"
-            echo "state: $state"
-            echo "labels: $labels"
-            echo "assignees: $assignees"
-            echo "comments: $comments"
-            echo "---"
-            echo ""
-            echo "(body not yet downloaded)"
-            echo ""
-        }
-
-
-        shard_path=$(shard "$number") || echo "ERROR: Failed to compute shard for issue #$number" >&2 
+    # Use record separator (0x1E) to separate rows
+    while IFS= read -r -d $'\x1E' record; do
+        # Skip empty records
+        [[ -z "$record" ]] && continue
+        
+        # Parse fields using unit separator (0x1F)
+        IFS=$'\x1F' read -r id number title state created_at updated_at closed_at labels assignees comments <<< "$record"
+        
+        shard_path=$(shard "$number")
         mkdir -p "github/$(dirname "$shard_path")"
         
         {
@@ -102,22 +79,22 @@ while true; do
         ((count++))
         ((processed++))
         
-        # Show progress every 1000 items
         if ((processed % 1000 == 0)); then
             percentage=$((processed * 100 / total))
             echo "Progress: $processed/$total ($percentage%) - Issue #$number" >&2
         fi
-    #done < <(sqlite3 -separator $'\x1F' "$DB_FILE" \
-    #    "SELECT * FROM issues ORDER BY updated_at DESC LIMIT $BATCH_SIZE OFFSET $offset;")
-
-    # testing with title containing a newline character
-    done < <(sqlite3 -separator $'\x1F' "gh_list_ex01.db" \
-            'SELECT * FROM issues;')
-
+    done < <(sqlite3 "$DB_FILE" <<EOF
+.separator "\x1F" "\x1E"
+SELECT id, number, title, state, created_at, updated_at, closed_at, labels, assignees, comments 
+FROM issues 
+ORDER BY updated_at DESC 
+LIMIT $BATCH_SIZE OFFSET $offset;
+EOF
+)
+    
     echo "Batch complete: processed $count rows in this batch" >&2
     echo "" >&2
     
-    # If we processed fewer rows than BATCH_SIZE, we're done
     [[ $count -lt $BATCH_SIZE ]] && break
     
     ((offset += BATCH_SIZE))
