@@ -79,6 +79,7 @@ git_project_root() {
   #   dirname "$(git rev-parse --git-common-dir)"
   # Testing
   #   if [ "$(git_project_root)" != "$(realpath $(dirname $(git rev-parse --git-common-dir)))" ]; then echo "alarm!"; fi
+  # git rev-parse --git-common-dir return . in the root directory
 }
 
 #GIT_ISSUE_DIR=".issues"
@@ -144,7 +145,7 @@ git_issue_init() {
   [ -d "$wt" ] && {
     echo ".issues already exists. Use the following to remove it"
     echo ""
-    echo "  git worktree remove $wt"
+    echo "  git worktree remove $wt # To remove forcefully, use --force"
     echo "  git update-ref -d $(issue_ref)"
     return 0
   }
@@ -159,7 +160,7 @@ git_issue_init() {
   local_ref="$(issue_ref)"
   remote_ref="$(remote_issue_ref "$remote")"
 
-  echo ".issue/" >> "$root/.git/info/exclude"
+  echo ".issues/" >> "$root/.git/info/exclude"
 
   if git ls-remote --exit-code "$remote" "$local_ref" > /dev/null 2>&1; then
     # ref exists on the remote
@@ -168,13 +169,17 @@ git_issue_init() {
       read -p '  - Do you want to clone it? (Y/N)' ans
       case "$ans" in
         [Yy])
+          # Possibly post-commit hook for auto-sync issue-status(open->closed)
           git_issue_clone "$remote"
           git config --local extensions.worktreeConfig true || echo 'FAILED: git config --local extensions.worktreeConfig true'
           cd $wt && {
             git config --worktree advice.detachedHead false
             git config --worktree core.hooksPath /dev/null || echo 'FAILED: git config --worktree core.hooksPath /dev/null'
 
-            echo ".local-repo-id" >> "$(git rev-parse --git-dir)/info/exclude"
+            # mkdir -p "$(git rev-parse --git-dir)/info"
+            # echo ".local-repo-id" >> "$(git rev-parse --git-dir)/info/exclude"
+            #echo ".gitignore" >> .gitignore
+            #echo ".local-repo-id" >> .gitignore
           }
           cd -
           return
@@ -215,8 +220,10 @@ git_issue_init() {
 
   echo ".local-repo-id" >> "$(git rev-parse --git-dir)/info/exclude"
   cat > .gitignore << 'EOF'
-# Ignore everything in issues/ except TEMPLATE.md 
+# Ignore everything in .issues/ except TEMPLATE.md 
 .local-repo-id
+TEMPLATE*.md
+!TEMPLATE*.md/
 EOF
 
   cat > TEMPLATE.md << 'EOF'
