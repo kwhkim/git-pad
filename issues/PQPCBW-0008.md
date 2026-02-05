@@ -1,7 +1,7 @@
 ---
 title: Selecting possible statuses(lifecycle of issues)
 type: enhancement
-priority: low
+priority: P3
 status: open
 ---
 

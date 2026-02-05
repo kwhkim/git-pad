@@ -2,6 +2,7 @@
 title: test if git issue push/fetch/merge works all right
 type: test
 priority: P2
+status: open
 ---
 
 ## Description

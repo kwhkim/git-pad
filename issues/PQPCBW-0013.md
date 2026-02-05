@@ -2,6 +2,7 @@
 title: automatically reflect issue resolution by commit(eg. resolves #...)
 type: enhancement
 priority: P2
+status: open
 ---
 
 ## Description

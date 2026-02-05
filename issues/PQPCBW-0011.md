@@ -2,6 +2,7 @@
 title: backtick in title cause git issue list-full to halt
 type: bug
 priority: P1
+status: closed
 ---
 
 ## Description
