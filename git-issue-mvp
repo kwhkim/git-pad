@@ -673,6 +673,23 @@ git_issue_log() {
 #   ls "$root/.issues/issues" | sed 's/\.md$//'
 # }
 
+count_comments() {
+  # Count comment files
+  id="$1"
+
+  root=$(git_project_root)
+  issues_dir="$root/.issues/issues" || return 1
+
+  comments_dir="$issues_dir/$id/comments"
+  if [ -d "$comments_dir" ]; then
+    num_comments=$(find "$comments_dir" -type f | wc -l)
+  else
+    num_comments=0
+  fi
+
+  echo "$num_comments"
+}
+
 git_issue_show() {
   id="$(parse_issue_id "$1")" || return 1
   [ -z "$id" ] && echo "usage: git issue show <id>" && return 1
@@ -688,35 +705,45 @@ git_issue_show() {
     echo "Issue $id not found"
     return 1
   }
-
+  print_hline
   echo "ISSUE-FILE: issues/$id.md"
   sed -n '1,200p' "$file"
   #fi
 
-  while :; do
-    read -r -p "--->8 Continue to comments? (Y/N) " ans
-    if [[ $ans =~ ^(N|n)$ ]]; then
-      return 0
-    elif [[ $ans =~ ^(Y|y|N|n)$ ]]; then
-      break
-    fi
-  done
+  num_comments=$(count_comments "$id")
+  print_hline
+  echo "- Comments found : $num_comments"
+  echo ""
 
-  DIR_COMMENT="$wt/issues/$id/comments"
-
-  if [[ -d $DIR_COMMENT ]]; then
-    find "$DIR_COMMENT" -type f -print0 |
-    while IFS= read -r -d '' other_comment_file; do
-        echo '' 
-        echo '=== >8 COMMENT '"$other_comment_file"' ---' 
-        #cat "$other_comment_file" 
-        sed 's/^/  /' "$other_comment_file"
-        echo '' 
+  if [[ "$num_comments" -gt 0 ]]; then
+    while :; do
+      read -r -p "--->8 Continue to comments? (Y/N) " ans
+      if [[ $ans =~ ^(N|n)$ ]]; then
+        return 0
+      elif [[ $ans =~ ^(Y|y|N|n)$ ]]; then
+        break
+      fi
     done
-  else
-    echo '!I: No comments found'
+
+    DIR_COMMENT="$wt/issues/$id/comments"
+
+    if [[ -d $DIR_COMMENT ]]; then
+      # find "$DIR_COMMENT" -type f -print0 |
+      # sort by mtime (oldest to newest)
+      find "$DIR_COMMENT" -type f -printf "%T@ %p\0" | sort -zn | cut -zd' ' -f2- |
+      # find "$DIR_COMMENT" -type f -printf "%T@ %p\0" | sort -zn | cut -zd' ' -f2- |    # newest to oldest
+      while IFS= read -r -d '' other_comment_file; do
+          echo '' 
+          echo '=== >8 COMMENT '"$other_comment_file"' ---' 
+          #cat "$other_comment_file" 
+          sed 's/^/  /' "$other_comment_file"
+          echo '' 
+      done
+    fi
   fi
 }
+
+
 
 git_issue_list() {
   root=$(git_project_root)
@@ -731,13 +758,7 @@ git_issue_list() {
     [ -f "$f" ] || continue
     id=$(basename "$f" .md)
     
-    # Count comment files
-    comments_dir="$issues_dir/$id/comments"
-    if [ -d "$comments_dir" ]; then
-      num_comments=$(find "$comments_dir" -type f | wc -l)
-    else
-      num_comments=0
-    fi
+    num_comments=$(count_comments "$id")
 
     num_comments=$(printf "%4d" "$num_comments")
 
