@@ -703,8 +703,9 @@ git_issue_show() {
     find "$DIR_COMMENT" -type f -print0 |
     while IFS= read -r -d '' other_comment_file; do
         echo '' 
-        echo '--- >8 COMMENT '"$other_comment_file"' ---' 
-        cat "$other_comment_file" 
+        echo '=== >8 COMMENT '"$other_comment_file"' ---' 
+        #cat "$other_comment_file" 
+        sed 's/^/  /' "$other_comment_file"
         echo '' 
     done
   else
