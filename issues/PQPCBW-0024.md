@@ -1,5 +1,5 @@
 ---
-title: injest.sh| respect RATE_LIMIT=5000/hour
+title: gh_list_download.sh| respect RATE_LIMIT=5000/hour
 type: enhancement
 priority: P1
 status: open
@@ -8,7 +8,7 @@ status: open
 ## Description
 
 There is RATE_LIMIT for API, GraphQL
-Respect it so wait some time
+To respect it, wait for some time.
 
 ## Steps to Reproduce
 
