@@ -546,6 +546,9 @@ git_issue_new() {
     [ -f "$path" ] || cp "$wt/TEMPLATE.md" "$path"
     id=$(basename "$fn_md" .md)
     git_issue_edit "$id" || { return 1; }
+    if [ -s $path ]; then
+      echo '- issue '"$fn_md"' created'
+    fi
     cd - || return 1
   else
     {
