@@ -364,6 +364,121 @@ git_issue_edit() {
   # else
   #   return 0
   # fi
+
+git_issue_comment() {
+  [ $# -eq 0 ] && { echo "usage: git issue comment <issue id>"; return 1; }
+  id="$(parse_issue_id "$1")" || return 1
+  fn_md="$id".md
+  root=$(git_project_root)
+  wt=$(git_issue_worktree)
+  path="$wt"/issues/"$fn_md"
+  if ! safe_cd "$wt"; then
+    return 1
+  fi
+
+  #fn=$1
+  [ -z "$id" ] && {
+    echo "usage: git issue comment <issue id>"
+    cd -
+    return 1
+  }
+
+  [ -f "$path" ] || {
+    echo "Issue $id not found"
+    cd -
+    return 1
+  }
+
+  comment_char=$(git config core.commentChar)
+  comment_char="${comment_char:-#}"
+
+  echo "- comment character set to $comment_char"
+
+  tmpfile="$(mktemp)"".md"
+
+  #sed 's/^/# /' file.txt > "$tmpfile"
+  sed 's/^/'"$comment_char "'/' "$path" >> "$tmpfile"
+  #echo '# --- >8 ISSUE '"$id"' ---' >> "$tmpfile"
+
+  DIR_COMMENT="$wt/issues/$id/comments"
+  echo "- comment directory : $DIR_COMMENT"
+  comment_file=$(new_filename_comment .md "$id") || { echo '!E: New comment name could not be created'; return 1; }
+  echo '- new comment file named '"$comment_file"
+
+  mkdir -p "$DIR_COMMENT"
+  find "$DIR_COMMENT" -type f -print0 |
+  while IFS= read -r -d '' other_comment_file; do
+      {
+        echo '' 
+        echo '# --- >8 COMMENT '"$other_comment_file"' ---' 
+        sed 's/^/'"$comment_char "'/' "$other_comment_file" 
+        echo '' 
+      } >> "$tmpfile"
+  done
+
+  echo '' >> "$tmpfile"
+  user=$(git config user.name)
+  email=$(git config user.email)
+  t_now=$(date "+%Y-%m-%d %H:%M:%S")
+
+  echo '*** comment by '"$user($email) at $t_now" >> "$tmpfile"
+
+  editor=$(git var GIT_EDITOR) || return 1
+
+  #${EDITOR:-vi} "$file"
+  sh -c "$editor \"$tmpfile\"" || {
+    echo '!'"W: editor failed"
+    cd -
+    return 1
+  }
+
+  # sed '/^'"$comment_char"'/d' "$tmpfile" > "$comment_file"
+  # if [ -s "$comment_file" ]; then
+  #   echo "- comment file saved to $comment_file"
+  # else
+  #   echo "- no comment to save. aborted"
+  # fi
+  message="$(
+  sed \
+    -e "s/[[:space:]]*$//" \
+    -e "/^""$comment_char""[[:space:]]./d" \
+    -e "/^""$comment_char""$/d" \
+    "$tmpfile" \
+  | sed '/./,$!d' \
+  | sed ':a;/^\n*$/{$d;N;ba;}'
+  )"
+
+  echo "- message : $message"
+
+  # shellcheck disable=SC2001
+  message_trimmed="$(echo "$message" |sed s/'[*][*][*] comment by .* at .*$'// )"
+
+  if [ -z "$message_trimmed" ]; then
+    echo "Aborted: empty message" >&2
+    rm -f "$tmpfile"
+    return 1
+  fi
+  
+  # Save result
+  echo "- comment_file : $comment_file"
+  printf "%s\n" "$message" > "$DIR_COMMENT"/"$comment_file" && echo "- comment file saved to $comment_file"
+
+  
+  # if cmp -s "$file" "$root/.issues/TEMPLATE.md"; then
+  #   echo "No changes made to issue $file"
+  #   read -p "Do you want to keep the file? (Y/n): " ans
+  #   if [[ $ans == [Nn]* ]]; then
+  #     rm -f "$file"
+  #     echo "Deleted template issue file $file"
+  #   else
+  #     echo "Keeping template issue file $file"
+  #   fi
+  # else
+  #   return 0
+  # fi
+  rm -f "$tmpfile"
+  cd -
+
 }
 
 git_issue_new() {
