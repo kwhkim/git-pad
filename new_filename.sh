@@ -53,6 +53,54 @@ next_seq() {
   printf "%0*d" "$pad" $((max + 1))
 }
 
+next_seq_comment() {
+  local rid="$1"
+  local ext="$2"
+  local issue_id="$3"
+  local max=0
+  local n n_dec
+
+  shopt -s nullglob
+  for f in "issues/$issue_id/comments/"*; do
+    [[ $f =~ ^issues/"$issue_id"/comments/$rid-([0-9]+)$ext$ ]] || continue
+    n="${BASH_REMATCH[1]}"
+    n_dec=$((10#$n)) # force decimal, strips padding safely
+    ((n_dec > max)) && max="$n_dec"
+  done
+  shopt -u nullglob
+
+  printf "%0*d" "$pad" $((max + 1))
+}
+
+new_filename_comment() {
+  if [[ $# -lt 2 ]]; then
+    echo "new_comment_file <ext> <issue_id>"
+  fi
+
+  ext=$1
+  issue_id=$2
+  
+
+  if [[ -f $id_file ]]; then
+    repo_id=$(< "$id_file")
+  else
+    while :; do
+      repo_id=$(gen_repo_id)
+      if [[ $(repo_id_in_use "$repo_id") == no ]]; then
+        printf '%s\n' "$repo_id" > "$id_file"
+        break
+      fi
+    done
+  fi
+
+  seq=$(next_seq_comment "$repo_id" "$ext" "$issue_id")
+  filename="$repo_id-$seq$ext"
+
+  printf '%s\n' "$filename"
+
+
+}
+
 # ---- main ----
 
 new_filename() {
