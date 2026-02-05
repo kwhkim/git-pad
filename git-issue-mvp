@@ -675,6 +675,7 @@ git_issue_show() {
   #else
   #id=$(printf "%04d" $id)
   root=$(git_project_root)
+  wt=$(git_issue_worktree)
   file="$root/.issues/issues/$id.md"
 
   [ -f "$file" ] || {
@@ -685,6 +686,29 @@ git_issue_show() {
   echo "ISSUE-FILE: issues/$id.md"
   sed -n '1,200p' "$file"
   #fi
+
+  while :; do
+    read -r -p "--->8 Continue to comments? (Y/N) " ans
+    if [[ $ans =~ ^(N|n)$ ]]; then
+      return 0
+    elif [[ $ans =~ ^(Y|y|N|n)$ ]]; then
+      break
+    fi
+  done
+
+  DIR_COMMENT="$wt/issues/$id/comments"
+
+  if [[ -d $DIR_COMMENT ]]; then
+    find "$DIR_COMMENT" -type f -print0 |
+    while IFS= read -r -d '' other_comment_file; do
+        echo '' 
+        echo '--- >8 COMMENT '"$other_comment_file"' ---' 
+        cat "$other_comment_file" 
+        echo '' 
+    done
+  else
+    echo '!I: No comments found'
+  fi
 }
 
 git_issue_list() {
