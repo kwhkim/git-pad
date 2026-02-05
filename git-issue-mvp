@@ -344,12 +344,14 @@ git_issue_edit() {
   #mkdir -p "$(dirname "$file")"
   [ -f "$path" ] || {
     echo "Issue $id not found"
+    cd -
     return 1
   }
 
   #${EDITOR:-vi} "$file"
   sh -c "$editor \"$path\"" || {
     echo "editor failed"
+    cd -
     return 1
   }
 
@@ -365,6 +367,8 @@ git_issue_edit() {
   # else
   #   return 0
   # fi
+  cd -
+}
 
 git_issue_comment() {
   [ $# -eq 0 ] && { echo "usage: git issue comment <issue id>"; return 1; }
