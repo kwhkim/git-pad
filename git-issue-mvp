@@ -222,6 +222,7 @@ git_issue_init() {
   cat > .gitignore << 'EOF'
 # Ignore everything in .issues/ except TEMPLATE.md 
 .local-repo-id
+github/
 TEMPLATE*.md
 !TEMPLATE*.md/
 EOF
