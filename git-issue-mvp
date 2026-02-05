@@ -330,6 +330,7 @@ git_issue_edit() {
   #fn=$1
   [ -z "$id" ] && {
     echo "usage: git issue edit <id>"
+    cd -
     return 1
   }
 
