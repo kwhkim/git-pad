@@ -883,14 +883,18 @@ git_issue_list() {
   
   # --- Generalized Argument Parsing ---
   local filter_status=""
+  local filter_type=""
+
   while [[ "$#" -gt 0 ]]; do
     case $1 in
-      # This matches --filter-status=anything
       --filter-status=*) 
         filter_status="${1#*=}" 
         shift 
         ;;
-      # You can still keep shortcuts if you like:
+      --filter-type=*) 
+        filter_type="${1#*=}" 
+        shift 
+        ;;
       --open) filter_status="open"; shift ;;
       --closed) filter_status="closed"; shift ;;
       *) shift ;; 
@@ -921,7 +925,11 @@ git_issue_list() {
     num_comments=$(count_comments "$id")
     num_comments=$(printf "%4d" "$num_comments")
     
-    awk -v id="$id" -v num_comments="$num_comments" -v target_status="$filter_status" '
+    # Pass both filter variables into awk
+    awk -v id="$id" \
+        -v num_comments="$num_comments" \
+        -v target_status="$filter_status" \
+        -v target_type="$filter_type" '
       BEGIN {
         in_yaml = 0
         title = type = pri = status = ""
@@ -935,23 +943,28 @@ git_issue_list() {
           sub(/^title:[[:space:]]*/, "")
           title = $0
         }
-        else if ($1 == "type:") type = substr($2, 1, 8)
+        else if ($1 == "type:") {
+          sub(/^type:[[:space:]]*/, "")
+          type = $0
+          gsub(/[[:space:](].*$/, "", type) # Trim metadata like (critical)
+        }
         else if ($1 == "priority:") pri = substr($2, 1, 8)
         else if ($1 == "status:") {
-          # Capture everything after "status: "
           sub(/^status:[[:space:]]*/, "")
           status = $0
-          # Clean status: remove everything from the first space or parenthesis
           gsub(/[[:space:](].*$/, "", status)
         }
       }
       END {
-        # filter_status is passed in as target_status
-        if (target_status == "" || status == target_status) {
+        # Check both status and type conditions
+        match_status = (target_status == "" || status == target_status)
+        match_type   = (target_type == "" || type == target_type)
+
+        if (match_status && match_type) {
           printf "%-13s %-8s %-8s %-3s %-4s %s\n",
             id,
             (status ? substr(status, 1, 8) : "-"),
-            (type   ? type   : "-"),
+            (type   ? substr(type, 1, 8)   : "-"),
             (pri    ? pri    : "-"),
             num_comments,
             (title  ? title  : "-")
