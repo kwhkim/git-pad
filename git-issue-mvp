@@ -29,31 +29,46 @@ is_git_scp_like_host_path() {
   local host path host_part
 
   # must contain exactly one colon (first colon matters)
-  [[ "$url" == *:* ]] || return 1
+  case "$url" in
+    *:*) ;;
+    *) return 1 ;;
+  esac
 
   host_part="${url%%:*}"
   path="${url#*:}"
 
   # path must not be empty to be scp-like
-  [[ -n "$path" ]] || return 1
+  [ -n "$path" ] || return 1
 
   # reject if '/' appears before the colon
-  [[ "$host_part" != */* ]] || return 1
+  case "$host_part" in
+    */*) return 1 ;;
+  esac
 
   # strip optional user@ (take part after last @)
   host="${host_part##*@}"
 
   # host must be non-empty
-  [[ -n "$host" ]] || return 1
+  [ -n "$host" ] || return 1
 
   # hostname-legal characters: [A-Za-z0-9.-]+
-  [[ "$host" =~ ^[A-Za-z0-9.-]+$ ]] || return 1
+  # Use case statement for character validation instead of regex
+  # First check if it contains any invalid characters
+  case "$host" in
+    *[!A-Za-z0-9.-]*) return 1 ;;  # Contains invalid chars
+    "") return 1 ;;                 # Empty string
+  esac
 
   # Windows drive-letter exclusion (only if running on Windows Git)
   # Safe to keep on Unix — it never triggers
-  if [[ "$OSTYPE" == msys* || "$OSTYPE" == cygwin* ]]; then
-    [[ ! "$host" =~ ^[A-Za-z]$ ]] || return 1
-  fi
+  case "${OSTYPE:-}" in
+    msys*|cygwin*)
+      # Check if host is a single letter (Windows drive)
+      case "$host" in
+        [A-Za-z]) return 1 ;;
+      esac
+      ;;
+  esac
 
   return 0 # scp-like
 }
@@ -171,13 +186,13 @@ git_issue_init() {
     # ref exists on the remote
     echo '!W: The reference '"$local_ref"' exists on the remote('"$remote"').'
     while true; do
-      read -p '  - Do you want to clone it? (Y/N)' ans
+      read -p '  - Do you want to clone it? (Y/N) ' ans
       case "$ans" in
         [Yy])
           # Possibly post-commit hook for auto-sync issue-status(open->closed)
           git_issue_clone "$remote"
           git config --local extensions.worktreeConfig true || echo 'FAILED: git config --local extensions.worktreeConfig true'
-          cd $wt && {
+          cd "$wt" && {
             git config --worktree advice.detachedHead false
             git config --worktree core.hooksPath /dev/null || echo 'FAILED: git config --worktree core.hooksPath /dev/null'
 
@@ -186,7 +201,7 @@ git_issue_init() {
             #echo ".gitignore" >> .gitignore
             #echo ".local-repo-id" >> .gitignore
           }
-          cd -
+          cd - > /dev/null || return 1
           return
           ;;
         [Nn])
@@ -209,14 +224,26 @@ git_issue_init() {
   # git worktree add --detach "$root/.issues"
   # cd "$root/.issues" || return 1
 
-  tmp_ref="refs/issues/tmp/$(date +%s)-$$"
+  # Platform-agnostic timestamp generation
+  if command -v gdate >/dev/null 2>&1; then
+    # macOS with GNU coreutils installed
+    timestamp=$(gdate +%s)
+  elif date +%s >/dev/null 2>&1; then
+    # Linux or macOS with recent date
+    timestamp=$(date +%s)
+  else
+    # Fallback for older systems
+    timestamp=$(perl -e 'print time')
+  fi
+  
+  tmp_ref="refs/issues/tmp/${timestamp}-$$"
   #git worktree add --orphan -B temp_issues $root/.issues
-  git worktree add --orphan -B $tmp_ref $root/.issues
+  git worktree add --orphan -B "$tmp_ref" "$root/.issues"
 
-  mkdir -p $root/.issues/issues
+  mkdir -p "$root/.issues/issues"
 
   git config --local extensions.worktreeConfig true || echo 'FAILED: git config --local extensions.worktreeConfig true'
-  cd $wt || {
+  cd "$wt" || {
     echo "failed to cd to issue worktree"
     return 1
   }
@@ -267,53 +294,88 @@ EOF
   commit=$(git rev-parse HEAD)
 
   #git update-ref "$ISSUE_REF_PREFIX/$issue_id"
-  git update-ref refs/issues/latest $commit
+  git update-ref refs/issues/latest "$commit"
 
   echo "Initialized issue tracking in .issues/"
 
   git checkout --detach
   #git branch -D temp_issues
-  git branch -D $tmp_ref
-  cd - || {
+  git branch -D "$tmp_ref"
+  cd - > /dev/null || {
     echo "failed to restore the directory"
     return 1
   }
 }
 
 parse_issue_id() {
-  local id=$1
+  local id="$1"
+  local id_left id_right
 
-  if [[ "$id" == *-* ]]; then
-
+  if echo "$id" | grep -q '-'; then
     # Normalize ID format
-    id_left=${id%-*}
-    id_right=${id#*-}
+    id_left="${id%-*}"
+    id_right="${id#*-}"
     #echo "$id_left" "$id_right"
+    
     if [ "$id_left" = "$id_right" ]; then
       echo 'usage: git issue edit <id>'
-      echo '  <id> should be alphbets-integers like PACMAN-0012, PACMAN-12, or PACMAN12'
+      echo '  <id> should be alphabets-integers like PACMAN-0012, PACMAN-12, or PACMAN12'
       return 1
     fi
 
     if ! is_int "$id_right"; then
       echo 'usage: git issue edit <id>'
-      echo '  <id> should be alphbets-integers like PACMAN-0012, PACMAN-12, or PACMAN12'
+      echo '  <id> should be alphabets-integers like PACMAN-0012, PACMAN-12, or PACMAN12'
       return 1
     fi
   else
-    if [[ "$id" =~ ^([[:alpha:]]+)([[:digit:]]+)$ ]]; then
-      id_left="${BASH_REMATCH[1]}"
-      id_right="${BASH_REMATCH[2]}"
-    else
+    # Extract alphabetic prefix and numeric suffix without regex
+    # Remove all digits from the end to get prefix
+    id_left="$id"
+    while [ "$id_left" != "${id_left%[0-9]}" ]; do
+      id_left="${id_left%[0-9]}"
+    done
+    
+    # Remove all non-digits from the beginning to get suffix
+    id_right="$id"
+    while [ "$id_right" != "${id_right#[!0-9]}" ]; do
+      id_right="${id_right#[!0-9]}"
+    done
+    
+    # Validate that we have both parts
+    if [ -z "$id_left" ] || [ -z "$id_right" ]; then
       echo "usage: git issue edit <id>"
-      echo '  <id> should be alphbets-integers like PACMAN-0012, PACMAN-12, or PACMAN12'
+      echo '  <id> should be alphabets-integers like PACMAN-0012, PACMAN-12, or PACMAN12'
       return 1
     fi
+    
+    # Verify id_left contains only alphabets and id_right contains only digits
+    case "$id_left" in
+      *[!A-Za-z]*)
+        echo "usage: git issue edit <id>"
+        echo '  <id> should be alphabets-integers like PACMAN-0012, PACMAN-12, or PACMAN12'
+        return 1
+        ;;
+    esac
+    
+    case "$id_right" in
+      *[!0-9]*)
+        echo "usage: git issue edit <id>"
+        echo '  <id> should be alphabets-integers like PACMAN-0012, PACMAN-12, or PACMAN12'
+        return 1
+        ;;
+    esac
   fi
 
   #echo "$id_left" "$id_right"
-  id_right=$(sed 's/^0*//' <<< "$id_right")
-  # 012은 octal number 12로 인식되므로 10진수로 바꿔줘야 함
+  
+  # Remove leading zeros - platform agnostic
+  id_right=$(echo "$id_right" | sed 's/^0*//')
+  
+  # Handle empty string (if input was all zeros like "0000")
+  [ -z "$id_right" ] && id_right="0"
+  
+  # Format with leading zeros (converts to decimal, avoiding octal interpretation)
   id_right=$(printf "%04d" "$id_right")
   #echo "$id_left" "$id_right"
 
@@ -323,20 +385,24 @@ parse_issue_id() {
 
 git_issue_edit() {
 
+  echo gie1
   id="$(parse_issue_id "$1")" || return 1
 
+  echo gie2
   fn_md="$id".md
   root=$(git_project_root)
   wt=$(git_issue_worktree)
   path="$wt"/issues/"$fn_md"
+  
   if ! safe_cd "$wt"; then
+    echo '!E: '"Could not change directory to $wt"
     return 1
   fi
 
   #fn=$1
   [ -z "$id" ] && {
     echo "usage: git issue edit <id>"
-    cd -
+    cd - > /dev/null || return 1
     return 1
   }
 
@@ -347,33 +413,37 @@ git_issue_edit() {
 
   editor=$(git var GIT_EDITOR) || return 1
 
-  #mkdir -p "$(dirname "$file")"
+  #mkdir -p "$(dirname "$path")"
   [ -f "$path" ] || {
     echo "Issue $id not found"
-    cd -
+    cd - > /dev/null || return 1
     return 1
   }
 
-  #${EDITOR:-vi} "$file"
+  #${EDITOR:-vi} "$path"
   sh -c "$editor \"$path\"" || {
     echo "editor failed"
-    cd -
+    cd - > /dev/null || return 1
     return 1
   }
 
-  # if cmp -s "$file" "$root/.issues/TEMPLATE.md"; then
-  #   echo "No changes made to issue $file"
+  # if cmp -s "$path" "$root/.issues/TEMPLATE.md"; then
+  #   echo "No changes made to issue $path"
   #   read -p "Do you want to keep the file? (Y/n): " ans
-  #   if [[ $ans == [Nn]* ]]; then
-  #     rm -f "$file"
-  #     echo "Deleted template issue file $file"
-  #   else
-  #     echo "Keeping template issue file $file"
-  #   fi
+  #   case "$ans" in
+  #     [Nn]*)
+  #       rm -f "$path"
+  #       echo "Deleted template issue file $path"
+  #       ;;
+  #     *)
+  #       echo "Keeping template issue file $path"
+  #       ;;
+  #   esac
   # else
   #   return 0
   # fi
-  cd -
+  
+  cd - > /dev/null || return 1
 }
 
 git_issue_comment() {
@@ -383,6 +453,7 @@ git_issue_comment() {
   root=$(git_project_root)
   wt=$(git_issue_worktree)
   path="$wt"/issues/"$fn_md"
+  
   if ! safe_cd "$wt"; then
     return 1
   fi
@@ -390,13 +461,13 @@ git_issue_comment() {
   #fn=$1
   [ -z "$id" ] && {
     echo "usage: git issue comment <issue id>"
-    cd -
+    cd - > /dev/null || return 1
     return 1
   }
 
   [ -f "$path" ] || {
     echo "Issue $id not found"
-    cd -
+    cd - > /dev/null || return 1
     return 1
   }
 
@@ -406,6 +477,7 @@ git_issue_comment() {
   echo "- comment character set to $comment_char"
 
   tmpfile="$(mktemp)"".md"
+  trap 'rm -f "$tmpfile"' EXIT INT TERM
 
   #sed 's/^/# /' file.txt > "$tmpfile"
   sed 's/^/'"$comment_char "'/' "$path" >> "$tmpfile"
@@ -413,11 +485,17 @@ git_issue_comment() {
 
   DIR_COMMENT="$wt/issues/$id/comments"
   echo "- comment directory : $DIR_COMMENT"
-  comment_file=$(new_filename_comment .md "$id") || { echo '!E: New comment name could not be created'; return 1; }
+  comment_file=$(new_filename_comment .md "$id") || { 
+    echo '!E: New comment name could not be created'
+    rm -f "$tmpfile"
+    trap - EXIT INT TERM
+    cd - > /dev/null || return 1
+    return 1
+  }
   echo '- new comment file named '"$comment_file"
 
   mkdir -p "$DIR_COMMENT"
-  find "$DIR_COMMENT" -type f -print0 |
+  find "$DIR_COMMENT" -type f -print0 2>/dev/null |
   while IFS= read -r -d '' other_comment_file; do
       {
         echo '' 
@@ -430,16 +508,30 @@ git_issue_comment() {
   echo '' >> "$tmpfile"
   user=$(git config user.name)
   email=$(git config user.email)
-  t_now=$(date "+%Y-%m-%d %H:%M:%S")
+  
+  # Platform-agnostic date formatting
+  if date "+%Y-%m-%d %H:%M:%S" >/dev/null 2>&1; then
+    t_now=$(date "+%Y-%m-%d %H:%M:%S")
+  else
+    # Fallback for systems with limited date support
+    t_now=$(date)
+  fi
 
   echo '*** comment by '"$user($email) at $t_now" >> "$tmpfile"
 
-  editor=$(git var GIT_EDITOR) || return 1
+  editor=$(git var GIT_EDITOR) || {
+    rm -f "$tmpfile"
+    trap - EXIT INT TERM
+    cd - > /dev/null || return 1
+    return 1
+  }
 
-  #${EDITOR:-vi} "$file"
+  #${EDITOR:-vi} "$tmpfile"
   sh -c "$editor \"$tmpfile\"" || {
     echo '!'"W: editor failed"
-    cd -
+    rm -f "$tmpfile"
+    trap - EXIT INT TERM
+    cd - > /dev/null || return 1
     return 1
   }
 
@@ -449,6 +541,7 @@ git_issue_comment() {
   # else
   #   echo "- no comment to save. aborted"
   # fi
+  
   message="$(
   sed \
     -e "s/[[:space:]]*$//" \
@@ -456,17 +549,19 @@ git_issue_comment() {
     -e "/^""$comment_char""$/d" \
     "$tmpfile" \
   | sed '/./,$!d' \
-  | sed ':a;/^\n*$/{$d;N;ba;}'
+  | awk 'NF {p=1} p; END {while (sub(/\n$/,"")) {}}' 
   )"
 
   echo "- message : $message"
 
   # shellcheck disable=SC2001
-  message_trimmed="$(echo "$message" |sed s/'[*][*][*] comment by .* at .*$'// )"
+  message_trimmed="$(echo "$message" | sed 's/[*][*][*] comment by .* at .*$//')"
 
   if [ -z "$message_trimmed" ]; then
     echo "Aborted: empty message" >&2
     rm -f "$tmpfile"
+    trap - EXIT INT TERM
+    cd - > /dev/null || return 1
     return 1
   fi
   
@@ -475,28 +570,33 @@ git_issue_comment() {
   printf "%s\n" "$message" > "$DIR_COMMENT"/"$comment_file" && echo "- comment file saved to $comment_file"
 
   
-  # if cmp -s "$file" "$root/.issues/TEMPLATE.md"; then
-  #   echo "No changes made to issue $file"
-  #   read -p "Do you want to keep the file? (Y/n): " ans
-  #   if [[ $ans == [Nn]* ]]; then
-  #     rm -f "$file"
-  #     echo "Deleted template issue file $file"
-  #   else
-  #     echo "Keeping template issue file $file"
-  #   fi
+  # if cmp -s "$path" "$root/.issues/TEMPLATE.md"; then
+  #   echo "No changes made to issue $path"
+  #   printf "Do you want to keep the file? (Y/n): "
+  #   read -r ans
+  #   case "$ans" in
+  #     [Nn]*)
+  #       rm -f "$path"
+  #       echo "Deleted template issue file $path"
+  #       ;;
+  #     *)
+  #       echo "Keeping template issue file $path"
+  #       ;;
+  #   esac
   # else
   #   return 0
   # fi
+  
   rm -f "$tmpfile"
-  cd -
-
+  trap - EXIT INT TERM
+  cd - > /dev/null || return 1
 }
-
 git_issue_new() {
   root=$(git_project_root)
   # cd "$root/.issues" || return 1
   wt=$(git_issue_worktree)
   if ! safe_cd "$wt"; then
+    echo '!E:'" Could not change directory to $wt"
     return 1
   fi
 
@@ -543,19 +643,26 @@ git_issue_new() {
     return 1
   }
 
+  echo 1
   root=$(git_project_root)
   path="$wt/issues/$fn_md"
-
+  
+  echo 2
   mkdir -p "$(dirname "$path")"
+  
+  echo 3
   # Validation (Optional)
-  if [[ -z "$TITLE" ]]; then
+  if [ -z "$TITLE" ]; then
+    echo 4
     [ -f "$path" ] || cp "$wt/TEMPLATE.md" "$path"
     id=$(basename "$fn_md" .md)
+    echo 5
+    echo "- id=$id"
     git_issue_edit "$id" || { return 1; }
-    if [ -s $path ]; then
+    if [ -s "$path" ]; then
       echo '- issue '"$fn_md"' created'
     fi
-    cd - || return 1
+    cd - > /dev/null || return 1
   else
     {
       echo "---"
@@ -568,7 +675,7 @@ git_issue_new() {
       echo "$BODY"
     } > "$path"
     echo "Created new issue: issues/$fn_md"
-    cd - || return 1
+    cd - > /dev/null || return 1
   fi
 
 }
@@ -715,30 +822,55 @@ git_issue_show() {
   echo "- Comments found : $num_comments"
   echo ""
 
-  if [[ "$num_comments" -gt 0 ]]; then
+  if [ "$num_comments" -gt 0 ]; then
     while :; do
-      read -r -p "--->8 Continue to comments? (Y/N) " ans
-      if [[ $ans =~ ^(N|n)$ ]]; then
-        return 0
-      elif [[ $ans =~ ^(Y|y|N|n)$ ]]; then
-        break
-      fi
+      printf "%s" "--->8 Continue to comments? (Y/N) "
+      read -r ans
+      case "$ans" in
+        [Nn])
+          return 0
+          ;;
+        [Yy])
+          break
+          ;;
+        *)
+          # Invalid input, loop continues
+          ;;
+      esac
     done
 
     DIR_COMMENT="$wt/issues/$id/comments"
 
-    if [[ -d $DIR_COMMENT ]]; then
-      # find "$DIR_COMMENT" -type f -print0 |
-      # sort by mtime (oldest to newest)
-      find "$DIR_COMMENT" -type f -printf "%T@ %p\0" | sort -zn | cut -zd' ' -f2- |
-      # find "$DIR_COMMENT" -type f -printf "%T@ %p\0" | sort -zn | cut -zd' ' -f2- |    # newest to oldest
-      while IFS= read -r -d '' other_comment_file; do
-          echo '' 
-          echo '=== >8 COMMENT '"$other_comment_file"' ---' 
-          #cat "$other_comment_file" 
-          sed 's/^/  /' "$other_comment_file"
-          echo '' 
-      done
+    if [ -d "$DIR_COMMENT" ]; then
+      # Platform-agnostic approach using a temporary file for sorting
+      tmp_sorted=$(mktemp)
+      trap 'rm -f "$tmp_sorted"' EXIT INT TERM
+      
+      # Get files with modification times
+      find "$DIR_COMMENT" -type f -print0 2>/dev/null | while IFS= read -r -d '' f; do
+        # Get modification time in a platform-agnostic way
+        if stat -f "%m" "$f" >/dev/null 2>&1; then
+          # macOS (BSD stat)
+          mtime=$(stat -f "%m" "$f")
+        else
+          # Linux (GNU stat)
+          mtime=$(stat -c "%Y" "$f")
+        fi
+        printf "%s %s\n" "$mtime" "$f"
+      done | sort -n | cut -d' ' -f2- > "$tmp_sorted"
+      
+      # Process each file (oldest to newest)
+      while IFS= read -r other_comment_file; do
+        [ -f "$other_comment_file" ] || continue
+        echo '' 
+        echo '=== >8 COMMENT '"$other_comment_file"' ---' 
+        #cat "$other_comment_file" 
+        sed 's/^/  /' "$other_comment_file"
+        echo '' 
+      done < "$tmp_sorted"
+      
+      rm -f "$tmp_sorted"
+      trap - EXIT INT TERM
     fi
   fi
 }
@@ -748,53 +880,68 @@ git_issue_show() {
 git_issue_list() {
   root=$(git_project_root)
   issues_dir="$root/.issues/issues" || return 1
-
+  
   # check the folder .issues/
   [ ! -d "$root/.issues" ] && echo ".issue not found. Use \`git issue init\` to create new one and \`git issue clone\` to clone the remote issues" && return 1
-
+  
   printf "%-13s %-8s %-8s %-3s %-4s %s\n" "ID" "STATUS" "TYPE" "PRI" "#CMT" "TITLE"
-
-  while IFS= read -r -d '' f; do
+  
+  # Platform-agnostic approach: use a temporary file for sorting
+  tmp_file=$(mktemp)
+  trap 'rm -f "$tmp_file"' EXIT
+  
+  # Find all markdown files and get their modification times
+  find "$issues_dir" -maxdepth 1 -name "*.md" -type f | while IFS= read -r f; do
+    # Get modification time in a platform-agnostic way
+    if stat -f "%m" "$f" >/dev/null 2>&1; then
+      # macOS (BSD stat)
+      mtime=$(stat -f "%m" "$f")
+    else
+      # Linux (GNU stat)
+      mtime=$(stat -c "%Y" "$f")
+    fi
+    printf "%s %s\n" "$mtime" "$f"
+  done | sort -rn | cut -d' ' -f2- > "$tmp_file"
+  
+  # Process each file
+  while IFS= read -r f; do
     [ -f "$f" ] || continue
-    id=$(basename "$f" .md)
     
+    id=$(basename "$f" .md)
     num_comments=$(count_comments "$id")
-
     num_comments=$(printf "%4d" "$num_comments")
-
+    
     awk -v id="$id" -v num_comments="$num_comments" '
-            BEGIN {
-                in_yaml = 0
-                title = type = pri = status = ""
-            }
-
-            /^---$/ {
-                in_yaml = !in_yaml
-                next
-            }
-
-            in_yaml {
-                if ($1 == "title:") {
-                    sub(/^title:[[:space:]]*/, "")
-                    title = $0
-                }
-                else if ($1 == "type:") type = substr($2, 1, 8)
-                else if ($1 == "priority:") pri = substr($2, 1, 8)
-                else if ($1 == "status:") status = substr($2, 1, 8)
-            }
-
-            END {
-                printf "%-13s %-8s %-8s %-3s %-4s %s\n",
-                      id,
-                      status ? status : "-",
-                      type   ? type   : "-",
-                      pri    ? pri    : "-",
-                      num_comments,
-                      title  ? title  : "-"
-            }
-        ' "$f"
-  done < <(find "$issues_dir" -maxdepth 1 -name "*.md" -type f -printf '%T@ %p\0' | sort -zrn | cut -zd' ' -f2-)
-
+      BEGIN {
+        in_yaml = 0
+        title = type = pri = status = ""
+      }
+      /^---$/ {
+        in_yaml = !in_yaml
+        next
+      }
+      in_yaml {
+        if ($1 == "title:") {
+          sub(/^title:[[:space:]]*/, "")
+          title = $0
+        }
+        else if ($1 == "type:") type = substr($2, 1, 8)
+        else if ($1 == "priority:") pri = substr($2, 1, 8)
+        else if ($1 == "status:") status = substr($2, 1, 8)
+      }
+      END {
+        printf "%-13s %-8s %-8s %-3s %-4s %s\n",
+          id,
+          status ? status : "-",
+          type   ? type   : "-",
+          pri    ? pri    : "-",
+          num_comments,
+          title  ? title  : "-"
+      }
+    ' "$f"
+  done < "$tmp_file"
+  
+  rm -f "$tmp_file"
 }
 
 upper() {
@@ -1498,7 +1645,7 @@ git_issue_status() {
     issue_gitdir=$(git rev-parse --git-dir)
     if [ -f "$issue_gitdir"/MERGE_HEAD ]; then
       echo "Issue merge in progress"
-      git status --short
+      git status --short 
       exit 0
     fi
 
@@ -1543,7 +1690,7 @@ git_issue_status() {
     #   [ -n "$(git ls-files --others --exclude-standard)" ]; then
     #   echo "No changes since last commit"
     # else
-    git status --short
+    git status --short -- issues/
     # fi
   )
 }
