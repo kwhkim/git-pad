@@ -1511,6 +1511,17 @@ git_issue_merge() {
 
   for arg in "$@"; do
     case "$arg" in
+      --help)
+        echo '- Usage: git issue merge [--rebase] [--audit]'
+        echo '  - Start merging remote and current HEAD.'
+        echo '     --rebase: use rebase if possible'
+        echo '     --audit:  leave a tag for audit'
+        echo ''
+        echo '- Usage: git issue merge [--continue|--abort]'
+        echo '  - Continue or abort merge(or rebase) while in conflict'
+        echo '     --continue: continue merging after resolving conflicts manually'
+        echo '     --abort: abort the merging after conflicts'
+        ;; 
       --abort)
         if [ "$mode" = "--continue" ]; then
           echo "cannot use --abort and --continue together"
