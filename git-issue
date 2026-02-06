@@ -22,6 +22,9 @@ case "$cmd" in
   push)    git_issue_push "$@" ;;
   fetch)   git_issue_fetch "$@" ;;
   merge)   git_issue_merge "$@" ;;
+  pull)    git_issue_fetch "$@"
+           git_issue_merge --rebase --audit ;;
+  remote) git_issue_track "$@" ;;
   track)  git_issue_track "$@" ;;
 
   *)

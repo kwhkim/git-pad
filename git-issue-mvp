@@ -1274,14 +1274,17 @@ resolve_issue_remote() {
 
   # 4. branch upstream (only if on branch)
   local branch
+  root=$(git_project_root); cd "$root" > /dev/null 2>&1 || return 1
   branch=$(git symbolic-ref --quiet --short HEAD 2> /dev/null)
+  cd - > /dev/null 2>&1 || return 1
   if [ -n "$branch" ]; then
-    r=$(git config --get branch.$branch.remote)
+    r=$(git config --get branch."$branch".remote)
     [ -n "$r" ] && {
       echo "$r"
       return
     }
   fi
+  
 
   # 5. fallback
   echo origin
