@@ -160,7 +160,7 @@ git_issue_clone() {
 
 git_issue_init() {
   root="$(git_project_root)"
-  wt=$(git_issue_worktree)
+  wt="$(git_issue_worktree)"
 
   [ -d "$wt" ] && {
     echo ".issues already exists. Use the following to remove it"
@@ -1132,6 +1132,10 @@ git_issue_search() {
         ;;
     esac
   done
+
+  #echo "$title_pat"
+  #echo "$body_pat"
+  #echo "$ignore_case"
 
   awk -v pat="$pat" \
     -v title_pat="$title_pat" \
