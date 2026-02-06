@@ -881,16 +881,22 @@ git_issue_list() {
   root=$(git_project_root)
   issues_dir="$root/.issues/issues" || return 1
   
-  # --- Argument Parsing ---
+  # --- Generalized Argument Parsing ---
   local filter_status=""
   while [[ "$#" -gt 0 ]]; do
     case $1 in
+      # This matches --filter-status=anything
+      --filter-status=*) 
+        filter_status="${1#*=}" 
+        shift 
+        ;;
+      # You can still keep shortcuts if you like:
       --open) filter_status="open"; shift ;;
       --closed) filter_status="closed"; shift ;;
       *) shift ;; 
     esac
   done
-  # -------------------------
+  # -------------------------------------
 
   [ ! -d "$root/.issues" ] && echo ".issue not found..." && return 1
   
@@ -932,15 +938,15 @@ git_issue_list() {
         else if ($1 == "type:") type = substr($2, 1, 8)
         else if ($1 == "priority:") pri = substr($2, 1, 8)
         else if ($1 == "status:") {
-          # 1. Remove "status:" prefix and leading whitespace
+          # Capture everything after "status: "
           sub(/^status:[[:space:]]*/, "")
           status = $0
-          # 2. Trim everything starting from the first space or parenthesis
-          # This turns "closed (done)" or "closed(fixed)" into just "closed"
+          # Clean status: remove everything from the first space or parenthesis
           gsub(/[[:space:](].*$/, "", status)
         }
       }
       END {
+        # filter_status is passed in as target_status
         if (target_status == "" || status == target_status) {
           printf "%-13s %-8s %-8s %-3s %-4s %s\n",
             id,
