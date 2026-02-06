@@ -2,7 +2,7 @@
 
 print_hline() {
   printf '=%.0s' $(seq 1 $COLUMNS)
-  echo
+  echo ''
 }
 
 is_int() {
@@ -384,6 +384,7 @@ parse_issue_id() {
 }
 
 git_issue_edit() {
+  [ $# -eq 0 ] && { echo "usage: git issue comment <issue id>"; return 1; } 
 
   #echo gie1
   id="$(parse_issue_id "$1")" || return 1
@@ -406,26 +407,60 @@ git_issue_edit() {
     return 1
   }
 
-  # if ! is_int "$id"; then echo 'usage: git issue show <id>'; echo '  <id> should be an integer'; return 1;
-  # else
-  #   id=$(printf "%04d" $id)
-  # fi
-
-  editor=$(git var GIT_EDITOR) || return 1
-
-  #mkdir -p "$(dirname "$path")"
   [ -f "$path" ] || {
     echo "Issue $id not found"
     cd - > /dev/null || return 1
     return 1
   }
 
-  #${EDITOR:-vi} "$path"
-  sh -c "$editor \"$path\"" || {
-    echo "editor failed"
+  # if ! is_int "$id"; then echo 'usage: git issue show <id>'; echo '  <id> should be an integer'; return 1;
+  # else
+  #   id=$(printf "%04d" $id)
+  # fi
+
+  tmpfile="$(mktemp)"".md"
+  trap 'rm -f "$tmpfile"' EXIT INT TERM
+
+  cp "$wt/TEMPLATE.md" "$tmpfile"
+
+  editor=$(git var GIT_EDITOR) || {
+    rm -f "$tmpfile"
+    trap - EXIT INT TERM
     cd - > /dev/null || return 1
     return 1
   }
+
+
+  #${EDITOR:-vi} "$path"
+  sh -c "$editor \"$tmpfile\"" || {
+    echo "editor failed"
+    rm -f "$tmpfile"
+    trap - EXIT INT TERM
+    cd - > /dev/null || return 1
+    return 1
+  }  
+
+  echo $tmpfile
+  
+  # message="$(
+  # sed \
+  #   -e "s/[[:space:]]*$//" \
+  #   "$tmpfile" \
+  # | sed '/./,$!d' \
+  # | awk 'NF {p=1} p; END {while (sub(/\n$/,"")) {}}' 
+  # )"
+
+  if cmp -s "$tmpfile" "$wt/TEMPLATE.md"; then 
+    echo "- Nothing changed. Aborted."
+    cd - > /dev/null || return 1
+    return 1
+  else
+    mv $tmpfile $path
+    echo "- Saved to issue id $id"
+    cd - > /dev/null || return 1
+    return 0
+  fi
+
 
   # if cmp -s "$path" "$root/.issues/TEMPLATE.md"; then
   #   echo "No changes made to issue $path"
@@ -443,7 +478,7 @@ git_issue_edit() {
   #   return 0
   # fi
   
-  cd - > /dev/null || return 1
+  
 }
 
 git_issue_comment() {
@@ -798,6 +833,7 @@ count_comments() {
 }
 
 git_issue_show() {
+  id=${id%.md}
   id="$(parse_issue_id "$1")" || return 1
   [ -z "$id" ] && echo "usage: git issue show <id>" && return 1
 

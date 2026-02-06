@@ -25,7 +25,7 @@ case "$cmd" in
   track)  git_issue_track "$@" ;;
 
   *)
-    echo "usage for local   : git issue <init|add|edit|status|commit|comment|log|list|list-full|show|search>"
+    echo "usage for local   : git issue <init|edit|status|commit|comment|log|list|list-full|show|search>"
     echo "      for remotes : git issue <clone|track|push|fetch|merge>"
     exit 1
     ;;
