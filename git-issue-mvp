@@ -883,24 +883,44 @@ git_issue_list() {
   
   local filter_status=""
   local filter_type=""
-  local sort_mode="mtime" # Default sort
+  local sort_mode=""  # Initialize as empty to detect multiple calls
 
   # --- Argument Parsing ---
+  
+  
   while [[ "$#" -gt 0 ]]; do
     case $1 in
       --filter-status=*) filter_status="${1#*=}"; shift ;;
       --filter-type=*)   filter_type="${1#*=}"; shift ;;
-      --sort-comments)   sort_mode="comments"; shift ;;
-      --sort-comment)    sort_mode="comments"; shift ;;
-      --sort-cmt)    sort_mode="comments"; shift ;;
-      --sort-priorities) sort_mode="priority"; shift ;;
-      --sort-priority)   sort_mode="priority"; shift ;;
-      --sort-pri)        sort_mode="priority"; shift ;;
-      --open)            filter_status="open"; shift ;;
-      --closed)          filter_status="closed"; shift ;;
+      
+      # Grouping Comment sorting aliases
+      --sort-comments|--sort-comment|--sort-cmt)
+        if [[ -n "$sort_mode" ]]; then
+          echo "Error: Delete $1. Sort mode can be specified only once (already set to: $sort_mode)"
+          return 1
+        fi
+        sort_mode="comments"
+        shift 
+        ;;
+
+      # Grouping Priority sorting aliases
+      --sort-priorities|--sort-priority|--sort-pri)
+        if [[ -n "$sort_mode" ]]; then
+          echo "Error: Delete $1. Sort mode can be specified only once (already set to: $sort_mode)"
+          return 1
+        fi
+        sort_mode="priority"
+        shift 
+        ;;
+
+      --open)   filter_status="open"; shift ;;
+      --closed) filter_status="closed"; shift ;;
       *) shift ;; 
     esac
   done
+
+  # Fallback to default sorting if none was specified
+  [[ -z "$sort_mode" ]] && sort_mode="mtime"
 
   [ ! -d "$root/.issues" ] && echo ".issue not found..." && return 1
   
