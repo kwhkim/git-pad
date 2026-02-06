@@ -21,6 +21,8 @@ and test
     * secure_repo_id
     * next_seq
 
+* git issue edit
+* git issue comment
 
 
 ## Steps to Reproduce
