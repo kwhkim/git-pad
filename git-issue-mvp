@@ -385,10 +385,10 @@ parse_issue_id() {
 
 git_issue_edit() {
 
-  echo gie1
+  #echo gie1
   id="$(parse_issue_id "$1")" || return 1
 
-  echo gie2
+  #echo gie2
   fn_md="$id".md
   root=$(git_project_root)
   wt=$(git_issue_worktree)
@@ -643,21 +643,21 @@ git_issue_new() {
     return 1
   }
 
-  echo 1
+  #echo 1
   root=$(git_project_root)
   path="$wt/issues/$fn_md"
   
-  echo 2
+  #echo 2
   mkdir -p "$(dirname "$path")"
   
-  echo 3
+  #echo 3
   # Validation (Optional)
   if [ -z "$TITLE" ]; then
-    echo 4
+    #echo 4
     [ -f "$path" ] || cp "$wt/TEMPLATE.md" "$path"
     id=$(basename "$fn_md" .md)
-    echo 5
-    echo "- id=$id"
+    #echo 5
+    #echo "- id=$id"
     git_issue_edit "$id" || { return 1; }
     if [ -s "$path" ]; then
       echo '- issue '"$fn_md"' created'
