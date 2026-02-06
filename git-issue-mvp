@@ -421,7 +421,7 @@ git_issue_edit() {
   tmpfile="$(mktemp)"".md"
   trap 'rm -f "$tmpfile"' EXIT INT TERM
 
-  cp "$wt/TEMPLATE.md" "$tmpfile"
+  cp "$path" "$tmpfile"
 
   editor=$(git var GIT_EDITOR) || {
     rm -f "$tmpfile"
