@@ -1112,6 +1112,7 @@ EOF
 #git_issue_list_full
 
 git_issue_search() {
+  # for f in $(git issue search --title='[Tt]est'); do echo '========================='; echo '= '$f; echo ""; grep -C 5 -i Test $f; done
   local pat=
   local title_pat=
   local body_pat=
@@ -1143,79 +1144,76 @@ git_issue_search() {
     -v icase="$ignore_case" '
 
   function finish_file() {
+    if (prev_filename == "") return
     match_file = 1
 
-    # field-specific predicates
-    if (title_pat != "" && !(("title" in yaml) && yaml["title"] ~ title_pat))
+    # Case-insensitive preparation
+    content_to_check = (icase ? tolower(body) : body)
+    t_pat = (icase ? tolower(title_pat) : title_pat)
+    b_pat = (icase ? tolower(body_pat) : body_pat)
+    g_pat = (icase ? tolower(pat) : pat)
+
+    # 1. Title Specific Filter
+    if (title_pat != "") {
+      found_title = 0
+      for (k in yaml) {
+        key_match = (icase ? tolower(k) : k)
+        if (key_match == "title") {
+          val_match = (icase ? tolower(yaml[k]) : yaml[k])
+          if (val_match ~ t_pat) found_title = 1
+        }
+      }
+      if (!found_title) match_file = 0
+    }
+
+    # 2. Body Specific Filter
+    if (body_pat != "" && content_to_check !~ b_pat)
       match_file = 0
 
-    if (body_pat != "" && body !~ body_pat)
-      match_file = 0
-
-    # global pattern: yaml dump + body
+    # 3. Global pattern (check keys, values, AND body)
     if (pat != "") {
       dump = body
-      for (k in yaml)
-        dump = dump yaml[k] "\n"
-      if (dump !~ pat)
-        match_file = 0
+      for (k in yaml) dump = dump " " k " " yaml[k]
+      if (icase) dump = tolower(dump)
+      if (dump !~ g_pat) match_file = 0
     }
-    #if (match_file && FILENAME != "") print FILENAME
-    if (match_file && prev_filename != "") print prev_filename 
+
+    if (match_file) print prev_filename 
   }  
 
-  BEGIN {
-    if (icase) IGNORECASE = 1
-  }
-
-  FNR ==1 && NR > 1 {
-    finish_file()
-  }
-
-  # reset per-file state
+  # Reset state and process previous file before starting new file
   FNR == 1 {
+    if (NR > 1) finish_file()
     in_yaml = 0
     body = ""
-    delete yaml
+    # Portable way to clear an array
+    split("", yaml)
     prev_filename = FILENAME
   }
 
-  # detect YAML start
-  FNR == 1 && $0 == "---" {
-    in_yaml = 1
-    next
+  # YAML parsing
+  $0 == "---" {
+    if (FNR == 1) { in_yaml = 1; next }
+    if (in_yaml) { in_yaml = 0; next }
   }
 
-  # detect YAML end
-  in_yaml && $0 == "---" {
-    in_yaml = 0
-    next
-  }
-
-  # parse YAML key: value (flat only)
   in_yaml {
-    if (match($0, /^[a-zA-Z0-9_-]+:[[:space:]]*/)) {
-      key = substr($0, 1, index($0, ":") - 1)
-      val = substr($0, index($0, ":") + 1)
-      sub(/^[[:space:]]+/, "", val)
+    if (match($0, /^[a-zA-Z0-9_-]+:/)) {
+      sep = index($0, ":")
+      key = substr($0, 1, sep - 1)
+      val = substr($0, sep + 1)
+      # Trim both leading and trailing whitespace
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "", val)
       yaml[key] = val
-      #print FILENAME
-      #print $0
-      #print key
-      #print val
     }
     next
   }
 
-  # collect body
-  {
-    body = body $0 "\n"
-  }
+  # Everything else is body
+  { body = body $0 "\n" }
 
-  END {
-    finish_file()
-  }
-  ' "$issues_dir"/*.md
+  END { finish_file() }
+' "$issues_dir"/*.md
 }
 
 #git_issue_search Hi
