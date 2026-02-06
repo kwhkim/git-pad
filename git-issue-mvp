@@ -881,97 +881,90 @@ git_issue_list() {
   root=$(git_project_root)
   issues_dir="$root/.issues/issues" || return 1
   
-  # --- Generalized Argument Parsing ---
   local filter_status=""
   local filter_type=""
+  local sort_mode="mtime" # Default sort
 
+  # --- Argument Parsing ---
   while [[ "$#" -gt 0 ]]; do
     case $1 in
-      --filter-status=*) 
-        filter_status="${1#*=}" 
-        shift 
-        ;;
-      --filter-type=*) 
-        filter_type="${1#*=}" 
-        shift 
-        ;;
-      --open) filter_status="open"; shift ;;
-      --closed) filter_status="closed"; shift ;;
+      --filter-status=*) filter_status="${1#*=}"; shift ;;
+      --filter-type=*)   filter_type="${1#*=}"; shift ;;
+      --sort-comments)   sort_mode="comments"; shift ;;
+      --sort-comment)    sort_mode="comments"; shift ;;
+      --sort-cmt)    sort_mode="comments"; shift ;;
+      --sort-priorities) sort_mode="priority"; shift ;;
+      --sort-priority)   sort_mode="priority"; shift ;;
+      --sort-pri)        sort_mode="priority"; shift ;;
+      --open)            filter_status="open"; shift ;;
+      --closed)          filter_status="closed"; shift ;;
       *) shift ;; 
     esac
   done
-  # -------------------------------------
 
   [ ! -d "$root/.issues" ] && echo ".issue not found..." && return 1
   
-  printf "%-13s %-8s %-8s %-3s %-4s %s\n" "ID" "STATUS" "TYPE" "PRI" "#CMT" "TITLE"
+  # Temporary files for processing
+  data_file=$(mktemp)
+  trap 'rm -f "$data_file"' EXIT
   
-  tmp_file=$(mktemp)
-  trap 'rm -f "$tmp_file"' EXIT
-  
+  # 1. Collect all issue data into a pipe-delimited format
   find "$issues_dir" -maxdepth 1 -name "*.md" -type f | while IFS= read -r f; do
     if stat -f "%m" "$f" >/dev/null 2>&1; then
       mtime=$(stat -f "%m" "$f")
     else
       mtime=$(stat -c "%Y" "$f")
     fi
-    printf "%s %s\n" "$mtime" "$f"
-  done | sort -rn | cut -d' ' -f2- > "$tmp_file"
-  
-  while IFS= read -r f; do
-    [ -f "$f" ] || continue
     
     id=$(basename "$f" .md)
     num_comments=$(count_comments "$id")
-    num_comments=$(printf "%4d" "$num_comments")
     
-    # Pass both filter variables into awk
-    awk -v id="$id" \
-        -v num_comments="$num_comments" \
-        -v target_status="$filter_status" \
-        -v target_type="$filter_type" '
-      BEGIN {
-        in_yaml = 0
-        title = type = pri = status = ""
-      }
-      /^---$/ {
-        in_yaml = !in_yaml
-        next
-      }
+    # We use awk to output a single raw data line: mtime|id|status|type|pri|comments|title
+    awk -v mtime="$mtime" -v id="$id" -v n_cmt="$num_comments" \
+        -v target_status="$filter_status" -v target_type="$filter_type" '
+      BEGIN { in_yaml = 0; title=type=pri=status="-" }
+      /^---$/ { in_yaml = !in_yaml; next }
       in_yaml {
-        if ($1 == "title:") {
-          sub(/^title:[[:space:]]*/, "")
-          title = $0
-        }
-        else if ($1 == "type:") {
-          sub(/^type:[[:space:]]*/, "")
-          type = $0
-          gsub(/[[:space:](].*$/, "", type) # Trim metadata like (critical)
-        }
-        else if ($1 == "priority:") pri = substr($2, 1, 8)
-        else if ($1 == "status:") {
-          sub(/^status:[[:space:]]*/, "")
-          status = $0
-          gsub(/[[:space:](].*$/, "", status)
-        }
+        if ($1 == "title:") { sub(/^title:[[:space:]]*/, ""); title = $0 }
+        else if ($1 == "type:") { sub(/^type:[[:space:]]*/, ""); type = $0; gsub(/[[:space:](].*$/, "", type) }
+        else if ($1 == "priority:") { pri = $2 }
+        else if ($1 == "status:") { sub(/^status:[[:space:]]*/, ""); status = $0; gsub(/[[:space:](].*$/, "", status) }
       }
       END {
-        # Check both status and type conditions
         match_status = (target_status == "" || status == target_status)
         match_type   = (target_type == "" || type == target_type)
-
         if (match_status && match_type) {
-          printf "%-13s %-8s %-8s %-3s %-4s %s\n",
-            id,
-            (status ? substr(status, 1, 8) : "-"),
-            (type   ? substr(type, 1, 8)   : "-"),
-            (pri    ? pri    : "-"),
-            num_comments,
-            (title  ? title  : "-")
+            # Output raw data separated by |
+            printf "%s|%s|%s|%s|%s|%s|%s\n", mtime, id, status, type, pri, n_cmt, title
         }
       }
     ' "$f"
-  done < "$tmp_file"
+  done > "$data_file"
+
+  # 2. Sort the data based on the requested mode
+  # Column mapping: 1:mtime, 2:id, 3:status, 4:type, 5:pri, 6:comments, 7:title
+  case $sort_mode in
+    comments)
+      # Sort by field 6 (comments) Numerically, Reverse
+      sorted_data=$(sort -t'|' -k6,6nr "$data_file")
+      ;;
+    priority)
+      # Sort by field 5 (priority) Alphanumerically (P1, P2...)
+      sorted_data=$(sort -t'|' -k5,5 "$data_file")
+      ;;
+    *)
+      # Default: Sort by field 1 (mtime) Numerically, Reverse
+      sorted_data=$(sort -t'|' -k1,1nr "$data_file")
+      ;;
+  esac
+
+  # 3. Print the Table
+  printf "%-13s %-8s %-8s %-3s %-4s %s\n" "ID" "STATUS" "TYPE" "PRI" "#CMT" "TITLE"
+  echo "$sorted_data" | while IFS='|' read -r mt id st ty pr cm ti; do
+    [ -z "$id" ] && continue
+    printf "%-13s %-8s %-8s %-3s %4d %s\n" \
+      "$id" "${st:0:8}" "${ty:0:8}" "${pr:0:3}" "$cm" "$ti"
+  done
 }
 
 upper() {
