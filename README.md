@@ -86,6 +86,9 @@ git issue list
   
 ## Related Projects(as-of 2026.02.04)
 
+* [Yona: Project Hosting SW](https://github.com/yona-projects/yona)
+  * Git/SVN + MariaDB
+  * latest release(1.16.0) : 2023.01.09
 * [git-appraise](https://github.com/google/git-appraise)
   * uses Git Notes, a built-in Git feature for attaching metadata to commits without modifying the commits themselves.
     * Not easy to modify, search(use `git grep`) 
