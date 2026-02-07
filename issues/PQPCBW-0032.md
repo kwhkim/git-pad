@@ -1,7 +1,8 @@
 ---
-title: When `git issue new` ends with no contents, no file is created.
+title: When `git issue new` ends with no contents, no file should be created.
 type: enhancement
 priority: P2
+status: open
 ---
 
 ## Description
