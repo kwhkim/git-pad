@@ -14,13 +14,19 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Run tests
+        id: tests
+        continue-on-error: true
         run: |
           mkdir -p artifacts
           echo "Running tests..."
-          ./run_tests.sh > artifacts/test.log 2>&1 || true
+          ./run_tests.sh > artifacts/test.log 2>&1
 
       - name: Upload test artifacts
         uses: actions/upload-artifact@v4
         with:
           name: test-output
           path: artifacts/
+
+      - name: Fail if tests failed
+        if: steps.tests.outcome == 'failure'
+        run: exit 1
