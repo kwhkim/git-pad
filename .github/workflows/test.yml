@@ -72,11 +72,13 @@ jobs:
       - name: Show shell info
         shell: bash
         run: |
-          { echo "Sehll: $SHELL"
-          uname -a
-          which bash
-          pwd
-          ls -la } > artifacts/test_shell.txt 2>&1
+          { 
+            echo "Shell: $SHELL"
+            uname -a
+            which bash
+            pwd
+            ls -la 
+          } > artifacts/test_shell.txt 2>&1
 
       - name: Run tests
         id: tests
