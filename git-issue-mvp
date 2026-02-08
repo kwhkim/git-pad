@@ -1,8 +1,9 @@
 #!/bin/bash
 
 print_hline() {
-  printf '=%.0s' $(seq 1 $COLUMNS)
-  echo ''
+  local cols
+  cols=$(tput cols 2>/dev/null || echo 80)
+  printf '%*s\n' "$cols" '' | tr ' ' '='
 }
 
 is_int() {
