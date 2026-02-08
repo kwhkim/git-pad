@@ -28,7 +28,7 @@ jobs:
       - name: Upload test artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: test-output
+          name: test-output-ubuntu
           path: artifacts/
 
       - name: Fail if tests failed
@@ -53,7 +53,7 @@ jobs:
       - name: Upload test artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: test-output
+          name: test-output-macos
           path: artifacts/
 
       - name: Fail if tests failed
@@ -78,7 +78,7 @@ jobs:
       - name: Upload test artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: test-output
+          name: test-output-windows
           path: artifacts/
 
       - name: Fail if tests failed
