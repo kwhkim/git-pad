@@ -174,16 +174,20 @@ git_issue_clone() {
   return
 }
 
+#! TODO: config.worktree, core.bar, core.worktree
 git_issue_init() {
   root="$(git_project_root)"
   wt="$(git_issue_worktree)"
 
   [ -d "$wt" ] && {
+    remote=${remote:-$(resolve_issue_remote)}
     echo ".issues already exists. Use the following to remove it"
     echo ""
     echo "  git worktree remove $wt # To remove forcefully, use --force"
     echo "  git update-ref -d $(issue_ref)"
-    return 0
+    echo "  git update-ref -d $(remote_issue_ref "$remote")"
+
+    return 1
   }
   
   CLONE=ask
@@ -214,13 +218,13 @@ git_issue_init() {
   local_ref="$(issue_ref)"
   remote_ref="$(remote_issue_ref "$remote")"
 
-  echo ".issues/" >> "$root/.git/info/exclude"
+  #echo ".issues/" >> "$root/.git/info/exclude"
   echo ".issues/" >> "$root/.gitignore"
 
   if git ls-remote --exit-code "$remote" "$local_ref" > /dev/null 2>&1; then
     # ref exists on the remote
     echo '!W: The reference '"$local_ref"' exists on the remote('"$remote"').'
-    if [ $CLONE = "maybe" ]; then
+    if [ $CLONE = "ask" ]; then
       while true; do
         read -p '  - Do you want to clone it? (Y/N) ' ans
         case "$ans" in
@@ -243,6 +247,7 @@ git_issue_init() {
       git config --local extensions.worktreeConfig true || echo 'FAILED: git config --local extensions.worktreeConfig true'
       cd "$wt" && {
         git config --worktree advice.detachedHead false
+        #git config --worktree core.worktree "$wt"
         git config --worktree core.hooksPath /dev/null || echo 'FAILED: git config --worktree core.hooksPath /dev/null'
 
         # mkdir -p "$(git rev-parse --git-dir)/info"
@@ -292,6 +297,7 @@ git_issue_init() {
     return 1
   }
   git config --worktree advice.detachedHead false
+  #git config --worktree core.worktree "$wt"
   git config --worktree core.hooksPath /dev/null || echo 'FAILED: git config --worktree core.hooksPath /dev/null'
 
   # echo ".local-repo-id" >> "$(git rev-parse --git-dir)/info/exclude"  # This can not be applied when `git issue clone` unless `git issue init` is always done before `git issue clone`
@@ -299,8 +305,8 @@ git_issue_init() {
 # Ignore everything in .issues/ except TEMPLATE.md 
 .local-repo-id
 github/
-TEMPLATE*.md
-!TEMPLATE*.md/
+#TEMPLATE*.md
+#!TEMPLATE*.md/
 EOF
 
   cat > TEMPLATE.md << 'EOF'
