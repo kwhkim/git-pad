@@ -186,6 +186,24 @@ git_issue_init() {
     echo "  git update-ref -d $(issue_ref)"
     return 0
   }
+  
+  CLONE=ask
+  if [ $# -gt 0 ]; then
+    for i in "$@"; do
+      case $i in
+        --no-clone|-n)
+          CLONE=false
+          ;;
+        --clone|-c)
+          CLONE=true
+          ;;
+        *)
+          # Handle unknown options or positional arguments
+          echo '!W: Unknown option: '"$i"
+          ;;
+      esac
+    done
+  fi
 
   #remote="$1"
   remote=$(resolve_issue_remote)
@@ -198,34 +216,44 @@ git_issue_init() {
   remote_ref="$(remote_issue_ref "$remote")"
 
   echo ".issues/" >> "$root/.git/info/exclude"
+  echo ".issues/" >> "$root/.gitignore"
 
   if git ls-remote --exit-code "$remote" "$local_ref" > /dev/null 2>&1; then
     # ref exists on the remote
     echo '!W: The reference '"$local_ref"' exists on the remote('"$remote"').'
-    while true; do
-      read -p '  - Do you want to clone it? (Y/N) ' ans
-      case "$ans" in
-        [Yy])
-          # Possibly post-commit hook for auto-sync issue-status(open->closed)
-          git_issue_clone "$remote"
-          git config --local extensions.worktreeConfig true || echo 'FAILED: git config --local extensions.worktreeConfig true'
-          cd "$wt" && {
-            git config --worktree advice.detachedHead false
-            git config --worktree core.hooksPath /dev/null || echo 'FAILED: git config --worktree core.hooksPath /dev/null'
+    if [ $CLONE = "maybe" ]; then
+      while true; do
+        read -p '  - Do you want to clone it? (Y/N) ' ans
+        case "$ans" in
+          [Yy])
+            CLONE=true
+            break
+            ;;
+          [Nn])
+            CLONE=false
+            break
+            ;;
+        esac
+      done
+    fi
+    
+    
+    if [ $CLONE = "true" ]; then
+      # Possibly post-commit hook for auto-sync issue-status(open->closed)
+      git_issue_clone "$remote"
+      git config --local extensions.worktreeConfig true || echo 'FAILED: git config --local extensions.worktreeConfig true'
+      cd "$wt" && {
+        git config --worktree advice.detachedHead false
+        git config --worktree core.hooksPath /dev/null || echo 'FAILED: git config --worktree core.hooksPath /dev/null'
 
-            # mkdir -p "$(git rev-parse --git-dir)/info"
-            # echo ".local-repo-id" >> "$(git rev-parse --git-dir)/info/exclude"
-            #echo ".gitignore" >> .gitignore
-            #echo ".local-repo-id" >> .gitignore
-          }
-          cd - > /dev/null || return 1
-          return
-          ;;
-        [Nn])
-          break
-          ;;
-      esac
-    done
+        # mkdir -p "$(git rev-parse --git-dir)/info"
+        # echo ".local-repo-id" >> "$(git rev-parse --git-dir)/info/exclude"
+        #echo ".gitignore" >> .gitignore
+        #echo ".local-repo-id" >> .gitignore
+      }
+      cd - > /dev/null || return 1
+      return
+    fi
   fi
 
   #: since git worktree add --orphan is used, no more needed?
