@@ -77,17 +77,16 @@ is_git_scp_like_host_path() {
 safe_cd() {
   local path="$1"
   if [ ! -e "$path" ]; then
-    echo "Issue worktree not yet initiated(.issues does not exist)" >&2
-    echo "  - use 'git issue init' to create one" >&2
+    echo '!E: '"directory $path does not exist" >&2
     return 1
   elif [ ! -d "$path" ]; then
-    echo "Error: .issues is not a directory" >&2
+    echo '!E: '"$path is not a directory" >&2
     return 1
   elif [ ! -x "$path" ]; then
-    echo "Error: Permission denied (no execute permission): $path" >&2
+    echo '!E: '"Permission denied (no execute permission): $path" >&2
     return 1
   elif ! cd "$path" 2>&1; then
-    echo "Error: Cannot cd to $path (unknown reason)" >&2
+    echo '!E: '"Cannot cd to $path (unknown reason)" >&2
     return 1
   fi
   return 0
