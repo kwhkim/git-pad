@@ -496,6 +496,10 @@ git_issue_edit() {
   # )"
 
   if cmp -s "$tmpfile" "$wt/TEMPLATE.md"; then 
+    echo "- Just template. Aborted."
+    cd - > /dev/null || return 1
+    return 1
+  elif cmp -s "$tmpfile" "$path"; then 
     echo "- Nothing changed. Aborted."
     cd - > /dev/null || return 1
     return 1
