@@ -758,7 +758,9 @@ git_issue_commit() {
 git_issue_log() {
   root="$(git_project_root)"
   wt=$(git_issue_worktree)
-  remote_tracking=$(git config --get issue.remote)
+  if ! remote_tracking=$(git config --get issue.remote); then 
+    remote_tracking=${remote_tracking:-$(resolve_issue_remote)}; fi
+
   local audit=0
 
   for arg in "$@"; do
@@ -770,7 +772,7 @@ git_issue_log() {
     esac
   done
 
-  [ -z "$remote_tracking" ] && remote_tracking=$(resolve_issue_remote)
+  
 
   if [[ $audit -eq 1 ]]; then
 
@@ -1259,32 +1261,28 @@ resolve_issue_remote() {
 
   # 2. issue.remote
   local r
-  r=$(git config --get issue.remote)
-  [ -n "$r" ] && {
+  if r=$(git config --get issue.remote); then
     echo "$r"
     return
-  }
+  fi
 
   # 3. remote.pushDefault
-  r=$(git config --get remote.pushDefault)
-  [ -n "$r" ] && {
+  if r=$(git config --get remote.pushDefault); then 
     echo "$r"
     return
-  }
+  fi
 
   # 4. branch upstream (only if on branch)
   local branch
   root=$(git_project_root); cd "$root" > /dev/null 2>&1 || return 1
-  branch=$(git symbolic-ref --quiet --short HEAD 2> /dev/null)
-  cd - > /dev/null 2>&1 || return 1
-  if [ -n "$branch" ]; then
-    r=$(git config --get branch."$branch".remote)
-    [ -n "$r" ] && {
+  if branch=$(git symbolic-ref --quiet --short HEAD 2> /dev/null); then
+    if r=$(git config --get branch."$branch".remote); then
       echo "$r"
       return
-    }
-  fi
-  
+    fi
+  fi 
+
+  cd - > /dev/null 2>&1 || return 1
 
   # 5. fallback
   echo origin
@@ -1308,30 +1306,26 @@ git_issue_track() {
 
     # from function resolve_issue_remote
     local r
-    r=$(git config --get issue.remote)
-    [ -n "$r" ] && {
+    if r=$(git config --get issue.remote); then
       echo "Currently tracking $r"
       return
-    }
+    fi
 
     echo "Tracking remote is not set."
 
     # 3. remote.pushDefault
-    r=$(git config --get remote.pushDefault)
-    [ -n "$r" ] && {
+    if r=$(git config --get remote.pushDefault); then
       echo "- remote.pushDefault set to $r"
       return
-    }
-
+    fi
+    
     # 4. branch upstream (only if on branch)
     local branch
-    branch=$(git symbolic-ref --quiet --short HEAD 2> /dev/null)
-    if [ -n "$branch" ]; then
-      r=$(git config --get branch.$branch.remote)
-      [ -n "$r" ] && {
+    if branch=$(git symbolic-ref --quiet --short HEAD 2> /dev/null); then
+      if r=$(git config --get branch.$branch.remote); then
         echo "- branch.CURRENT_BRANCH($branch).remote set to $r"
         return
-      }
+      fi
     fi
 
     # 5. fallback
@@ -1751,8 +1745,8 @@ git_issue_status() {
 
     local remote_tracking
     #remote=$(git_issue_remote)
-    remote_tracking=$(git config --get issue.remote)
-    remote_tracking=${remote_tracking:-$(resolve_issue_remote)}
+    if ! remote_tracking=$(git config --get issue.remote); then 
+      remote_tracking=${remote_tracking:-$(resolve_issue_remote)}; fi
     if [ -n "$remote_tracking" ]; then
       #echo "$remote_tracking"
 
