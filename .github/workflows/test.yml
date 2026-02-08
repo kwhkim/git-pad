@@ -23,7 +23,7 @@ jobs:
         run: |
           mkdir -p artifacts
           echo "Running tests..."
-          ./run_tests.sh > artifacts/test.log 2>&1
+          ./run_gh_tests.sh > artifacts/test.log 2>&1
 
       - name: Upload test artifacts
         uses: actions/upload-artifact@v4
@@ -48,7 +48,7 @@ jobs:
         run: |
           mkdir -p artifacts
           echo "Running tests..."
-          ./run_tests.sh > artifacts/test.log 2>&1
+          ./run_gh_tests.sh > artifacts/test.log 2>&1
 
       - name: Upload test artifacts
         uses: actions/upload-artifact@v4
@@ -67,13 +67,23 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Show shell info
+        shell: bash
+        run: |
+          { echo "Sehll: $SHELL"
+          uname -a
+          which bash
+          pwd
+          ls -la } > artifacts/test_shell.txt 2>&1
+
       - name: Run tests
         id: tests
+        shell: bash
         continue-on-error: true
         run: |
           mkdir -p artifacts
           echo "Running tests..."
-          ./run_tests.sh > artifacts/test.log 2>&1
+          ./run_gh_tests.sh > artifacts/test.log 2>&1
 
       - name: Upload test artifacts
         uses: actions/upload-artifact@v4
