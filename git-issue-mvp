@@ -531,7 +531,37 @@ git_issue_edit() {
 }
 
 git_issue_comment() {
-  [ $# -eq 0 ] && { echo "usage: git issue comment <issue id>"; return 1; }
+  [ $# -eq 0 ] && { echo "usage: git issue comment <issue id> [[-m|--message]=]"; return 1; }
+
+  message_next=fasle
+  for arg in "$@"; do
+    case "$arg" in
+      --message=*|-m=*)
+        MSG_CLI="${arg#*=}"
+        ;;
+      --message|-m)
+        message_next=true
+        ;;
+      --help)
+        echo "usage: git issue comment <issue id> [[-m|--message]=]" 
+        return 1
+        ;;
+      *)
+        if [ "$message_next" = "true" ]; then
+          MSG_CLI="$arg"
+        else
+          id=${id:-}
+          if [ -z "$id" ]; then
+            id="$arg"
+          else
+            echo "usage: git issue comment <issue id> [[-m|--message]=]"; return 1;
+          fi
+        fi
+        ;;
+    esac
+  done
+  
+
   id="$(parse_issue_id "$1")" || return 1
   fn_md="$id".md
   root=$(git_project_root)
@@ -555,8 +585,9 @@ git_issue_comment() {
     return 1
   }
 
-  comment_char=$(git config core.commentChar)
-  comment_char="${comment_char:-#}"
+  if ! comment_char=$(git config core.commentChar); then
+    comment_char="${comment_char:-#}"
+  fi
 
   echo "- comment character set to $comment_char"
 
@@ -603,21 +634,30 @@ git_issue_comment() {
 
   echo '*** comment by '"$user($email) at $t_now" >> "$tmpfile"
 
-  editor=$(git var GIT_EDITOR) || {
-    rm -f "$tmpfile"
-    trap - EXIT INT TERM
-    cd - > /dev/null || return 1
-    return 1
-  }
+  MSG_CLI=${MSG_CLI:-}
+  if [ -z "$MSG_CLI" ]; then 
+    
+    editor=$(git var GIT_EDITOR) || {
+      rm -f "$tmpfile"
+      trap - EXIT INT TERM
+      cd - > /dev/null || return 1
+      return 1
+    }
 
-  #${EDITOR:-vi} "$tmpfile"
-  sh -c "$editor \"$tmpfile\"" || {
-    echo '!'"W: editor failed"
-    rm -f "$tmpfile"
-    trap - EXIT INT TERM
-    cd - > /dev/null || return 1
-    return 1
-  }
+    #${EDITOR:-vi} "$tmpfile"
+    sh -c "$editor \"$tmpfile\"" || {
+      echo '!'"W: editor failed"
+      rm -f "$tmpfile"
+      trap - EXIT INT TERM
+      cd - > /dev/null || return 1
+      return 1
+    }
+  
+  else
+    #echo "" >> "$tmpfile"
+    echo "" >> "$tmpfile"
+    echo "$MSG_CLI" >> "$tmpfile"
+  fi
 
   # sed '/^'"$comment_char"'/d' "$tmpfile" > "$comment_file"
   # if [ -s "$comment_file" ]; then
@@ -792,13 +832,19 @@ git_issue_commit() {
   #  git commit
   #fi
 
-  git commit "$@"
-  [ $? -ne 0 ] && {
+  # git commit "$@"
+  # [ $? -ne 0 ] && {
+  #   echo "issue commit failed"
+  #   git restore --staged issues/
+  #   cd -
+  #   return 1
+  # }
+  if ! git commit "$@"; then
     echo "issue commit failed"
     git restore --staged issues/
     cd -
     return 1
-  }
+  fi
 
   git update-ref refs/issues/latest HEAD
   cd - || return 1
