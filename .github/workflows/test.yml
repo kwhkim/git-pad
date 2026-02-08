@@ -72,6 +72,7 @@ jobs:
       - name: Show shell info
         shell: bash
         run: |
+          mkdir -p artifacts
           { 
             echo "Shell: $SHELL"
             uname -a
