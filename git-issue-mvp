@@ -137,14 +137,28 @@ issue_git() {
 }
 
 git_issue_clone() {
-  remote="$1"
   root="$(git_project_root)"
   #remote=$(git_issue_remote)
-  remote=${remote:-$(resolve_issue_remote)}
-
   local wt
   wt=$(git_issue_worktree)
 
+  cd "$root" > /dev/null || return 1
+
+  if [ $# -eq 1 ]; then 
+    remote="$1"
+  elif [ $# -gt 1 ]; then
+    echo '!E: Usage git issue clone <remote>'
+    return 1
+  fi
+
+  if ! remote=${remote:-$(resolve_issue_remote)}; then
+    echo '!E: No remote, no default'
+    echo '- Uage: git issue clone <remote>'
+    cd - > /dev/null || return 1
+    return
+  fi
+
+  
   local local_ref remote_ref
   local_ref=$(issue_ref)
   remote_ref=$(remote_issue_ref "$remote")
@@ -157,6 +171,8 @@ git_issue_clone() {
   #git worktree add .issues $remote/issues/latest && cd .issues && git update-ref "$local_ref" HEAD
   git worktree add .issues "$remote_ref" && cd .issues && git update-ref "$local_ref" HEAD && git update-ref "$local_ref" "$remote_ref"
 
+  cd - > /dev/null || return 1
+  return
 }
 
 git_issue_init() {
