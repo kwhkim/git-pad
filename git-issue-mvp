@@ -250,7 +250,7 @@ git_issue_init() {
   git config --worktree advice.detachedHead false
   git config --worktree core.hooksPath /dev/null || echo 'FAILED: git config --worktree core.hooksPath /dev/null'
 
-  echo ".local-repo-id" >> "$(git rev-parse --git-dir)/info/exclude"
+  # echo ".local-repo-id" >> "$(git rev-parse --git-dir)/info/exclude"  # This can not be applied when `git issue clone` unless `git issue init` is always done before `git issue clone`
   cat > .gitignore << 'EOF'
 # Ignore everything in .issues/ except TEMPLATE.md 
 .local-repo-id
