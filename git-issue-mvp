@@ -1077,68 +1077,57 @@ git_issue_show() {
 
 
 git_issue_list() {
+  # 1. 모든 변수를 local로 선언하고 초기화 (unbound variable 방지)
+  local root=""
   root=$(git_project_root)
-  issues_dir="$root/.issues/issues" || return 1
+  local issues_dir="$root/.issues/issues"
   
+  [ ! -d "$issues_dir" ] && echo ".issue not found..." && return 1
+
   local filter_status=""
   local filter_type=""
-  local sort_mode=""  # Initialize as empty to detect multiple calls
+  local sort_mode=""
+  local US=$'\x1f'
 
-  # --- Argument Parsing ---
-  
-  
+  # --- 인자 파싱 ---
   while [[ "$#" -gt 0 ]]; do
     case $1 in
       --filter-status=*) filter_status="${1#*=}"; shift ;;
       --filter-type=*)   filter_type="${1#*=}"; shift ;;
-      
-      # Grouping Comment sorting aliases
       --sort-comments|--sort-comment|--sort-cmt)
-        if [[ -n "$sort_mode" ]]; then
-          echo "Error: Delete $1. Sort mode can be specified only once (already set to: $sort_mode)"
-          return 1
-        fi
-        sort_mode="comments"
-        shift 
-        ;;
-
-      # Grouping Priority sorting aliases
+        [[ -n "$sort_mode" ]] && echo "Error: Sort mode already set" && return 1
+        sort_mode="comments"; shift ;;
       --sort-priorities|--sort-priority|--sort-pri)
-        if [[ -n "$sort_mode" ]]; then
-          echo "Error: Delete $1. Sort mode can be specified only once (already set to: $sort_mode)"
-          return 1
-        fi
-        sort_mode="priority"
-        shift 
-        ;;
-
+        [[ -n "$sort_mode" ]] && echo "Error: Sort mode already set" && return 1
+        sort_mode="priority"; shift ;;
       --open)   filter_status="open"; shift ;;
       --closed) filter_status="closed"; shift ;;
-      *) shift ;; 
+      *) shift ;;
     esac
   done
 
-  # Fallback to default sorting if none was specified
   [[ -z "$sort_mode" ]] && sort_mode="mtime"
 
-  [ ! -d "$root/.issues" ] && echo ".issue not found..." && return 1
-  
-  # Temporary files for processing
+  # 변수 초기 선언 시 빈 값이라도 넣어줘야 set -u에서 안전합니다.
+  local data_file=""
   data_file=$(mktemp)
-  trap 'rm -f "$data_file"' EXIT
-  
-  # 1. Collect all issue data into a pipe-delimited format
-  find "$issues_dir" -maxdepth 1 -name "*.md" -type f | while IFS= read -r f; do
+
+  # 2. 데이터 수집 루프 (루프 내 변수들도 local 처리)
+  # find 결과가 없을 경우를 대비해 || true 등을 고려할 수 있음
+  while IFS= read -r -d '' f; do
+    local mtime=""
+    local id=""
+    local num_comments=0
+
     if stat -f "%m" "$f" >/dev/null 2>&1; then
       mtime=$(stat -f "%m" "$f")
     else
       mtime=$(stat -c "%Y" "$f")
     fi
-    
+
     id=$(basename "$f" .md)
     num_comments=$(count_comments "$id")
-    
-    # We use awk to output a single raw data line: mtime|id|status|type|pri|comments|title
+
     awk -v mtime="$mtime" -v id="$id" -v n_cmt="$num_comments" \
         -v target_status="$filter_status" -v target_type="$filter_type" '
       BEGIN { in_yaml = 0; title=type=pri=status="-" }
@@ -1153,37 +1142,33 @@ git_issue_list() {
         match_status = (target_status == "" || status == target_status)
         match_type   = (target_type == "" || type == target_type)
         if (match_status && match_type) {
-            # Output raw data separated by |
-            printf "%s|%s|%s|%s|%s|%s|%s\n", mtime, id, status, type, pri, n_cmt, title
+            printf "%s\x1f%s\x1f%s\x1f%s\x1f%s\x1f%s\x1f%s\n", mtime, id, status, type, pri, n_cmt, title
         }
       }
     ' "$f"
-  done > "$data_file"
+  done < <(find "$issues_dir" -maxdepth 1 -name "*.md" -type f -print0) > "$data_file"
 
-  # 2. Sort the data based on the requested mode
-  # Column mapping: 1:mtime, 2:id, 3:status, 4:type, 5:pri, 6:comments, 7:title
+  # 3. 정렬 및 출력
+  local sorted_data=""
   case $sort_mode in
-    comments)
-      # Sort by field 6 (comments) Numerically, Reverse
-      sorted_data=$(sort -t'|' -k6,6nr "$data_file")
-      ;;
-    priority)
-      # Sort by field 5 (priority) Alphanumerically (P1, P2...)
-      sorted_data=$(sort -t'|' -k5,5 "$data_file")
-      ;;
-    *)
-      # Default: Sort by field 1 (mtime) Numerically, Reverse
-      sorted_data=$(sort -t'|' -k1,1nr "$data_file")
-      ;;
+    comments) sorted_data=$(sort -t"$US" -k6,6nr "$data_file") ;;
+    priority) sorted_data=$(sort -t"$US" -k5,5   "$data_file") ;;
+    *)        sorted_data=$(sort -t"$US" -k1,1nr "$data_file") ;;
   esac
 
-  # 3. Print the Table
   printf "%-13s %-8s %-8s %-3s %-4s %s\n" "ID" "STATUS" "TYPE" "PRI" "#CMT" "TITLE"
-  echo "$sorted_data" | while IFS='|' read -r mt id st ty pr cm ti; do
-    [ -z "$id" ] && continue
-    printf "%-13s %-8s %-8s %-3s %4d %s\n" \
-      "$id" "${st:0:8}" "${ty:0:8}" "${pr:0:3}" "$cm" "$ti"
-  done
+  
+  # 정렬 데이터가 비어있을 수 있으므로 체크
+  if [[ -n "$sorted_data" ]]; then
+    while IFS="$US" read -r mt id st ty pr cm ti; do
+      [[ -z "$id" ]] && continue
+      printf "%-13s %-8s %-8s %-3s %4d %s\n" \
+        "$id" "${st:0:8}" "${ty:0:8}" "${pr:0:3}" "$cm" "$ti"
+    done <<< "$sorted_data"
+  fi
+
+  # 4. 수동 정리 (함수가 끝나기 전에 임시 파일 삭제)
+  rm -f "$data_file"
 }
 
 upper() {
@@ -1881,7 +1866,19 @@ git_issue_merge() {
         echo "$output"
         git update-ref "$local_ref" HEAD
         return 0
-      fi
+      elif ! git rev-parse HEAD~; then
+        if [ -n "$(git status --porcelain)" ]; then
+          echo '!E: '"There are still uncommitted contents in $wt. Aborted"
+          git merge --abort
+          return 0
+        else
+          echo '!W: '"You are at the root. Overwriting history"
+          git merge -X theirs --allow-unrelated-histories "$remote_ref"
+          git update-ref "$local_ref" HEAD
+          return 0
+        fi
+      fi 
+        
     fi
 
     # # Try rebase
@@ -2030,9 +2027,19 @@ git_issue_remove() {
   echo '!I: '"worktree $wt DELETED"
   echo "  - ref $(issue_ref) DELETED"
   echo "  - ref $(remote_issue_ref "$remote") DELETED"
+  echo ''
+  echo '!I: '"To delete remote issue ref"
+  echo '  - git push origin --delete refs/issues/latest or git push origin :refs/issues/latest'
 
   if ! safe_cd "$cwd"; then
      echo '!E :'"Can't change directoroy back to original directory"
      return 1
   fi
+}
+
+git_issue_version() {
+  root=$(git_project_root)
+  cd "$root" 1>/dev/null 2>&1 || return 1
+  git log -1 --format="%H"
+  cd - 1>/dev/null 2>&1 || return 1
 }
