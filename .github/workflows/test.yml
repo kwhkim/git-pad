@@ -321,6 +321,7 @@ jobs:
 
       - name: Run tests
         id: tests
+        shell: bash
         #continue-on-error: true
         run: |
           PATH=$PATH:$PWD
