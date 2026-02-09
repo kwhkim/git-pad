@@ -444,6 +444,7 @@ git_pad_edit() {
   [ $# -eq 0 ] && { echo "usage: git pad comment <issue id>"; return 1; } 
 
   #echo gie1
+  id=${id%.md}
   id="$(parse_issue_id "$1")" || return 1
 
   #echo gie2
@@ -573,7 +574,7 @@ git_pad_comment() {
     esac
   done
   
-
+  id=${id%.md}
   id="$(parse_issue_id "$1")" || return 1
   fn_md="$id".md
   root=$(git_project_root)
@@ -987,8 +988,9 @@ git_pad_show() {
     esac
   done
 
-  id="$(parse_issue_id "$id")" || return 1
   id=${id%.md}
+  id="$(parse_issue_id "$id")" || return 1
+
   [ -z "$id" ] && echo "usage: git pad show <id>" && return 1
 
   #if ! is_int "$id"; then echo 'usage: git pad show <id>'; echo '  <id> should be an integer'; return 1;
