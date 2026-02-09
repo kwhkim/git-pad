@@ -1683,7 +1683,8 @@ git_issue_fetch() {
     fi
   fi
 
-  git fetch "${opts[@]}" "$remote" \
+  # an older version of Bash on macOS. macOS ships with Bash 3.2 by default, which has a bug where "${opts[@]}" fails with set -u even when the array is initialized as empty.
+  git fetch ${opts[@]+"${opts[@]}"} "$remote" \
     "$(issue_ref):$(remote_issue_ref "$remote")" ||
     {
       echo "fetch failed"
