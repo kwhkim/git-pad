@@ -1,10 +1,10 @@
 #PATH=$PATH:$(realpath ~/git/git-issue)
 
-if [ ! -d R1 ]; then git clone git@github.com:kwhkim/git-issue.git R1; fi
+# if [ ! -d R1 ]; then git clone git@github.com:kwhkim/git-issue.git R1; fi
 
-#if [ ! -d bare1.git ]; then git clone --bare git@github.com:kwhkim/git-issue.git bare1.git; fi
-if [ -d bare1.git ]; then rm bare1.git || rm -rf bare1.git; fi
-git clone --bare git@github.com:kwhkim/git-issue.git bare1.git
+# #if [ ! -d bare1.git ]; then git clone --bare git@github.com:kwhkim/git-issue.git bare1.git; fi
+# if [ -d bare1.git ]; then rm bare1.git || rm -rf bare1.git; fi
+# git clone --bare git@github.com:kwhkim/git-issue.git bare1.git
 
 
 cd R1

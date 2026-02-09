@@ -19,8 +19,8 @@ jobs:
 
       - name: Clone to compare directory
         run: |
-          git clone https://github.com/${{ github.repository }} ./R1
-          git clone --bare https://github.com/${{ github.repository }} ./bare1.git
+          git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} ./R1
+          git clone --bare https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} ./bare1.git
           
 
       - name: Run tests
@@ -54,8 +54,8 @@ jobs:
 
       - name: Clone to compare directory
         run: |
-          git clone https://github.com/${{ github.repository }} ./R1
-          git clone --bare https://github.com/${{ github.repository }} ./bare1.git
+          git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} ./R1
+          git clone --bare https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} ./bare1.git
 
       - name: Run tests
         id: tests
@@ -88,8 +88,8 @@ jobs:
 
       - name: Clone to compare directory
         run: |
-          git clone https://github.com/${{ github.repository }} ./R1
-          git clone --bare https://github.com/${{ github.repository }} ./bare1.git
+          git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} ./R1
+          git clone --bare https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} ./bare1.git
 
       - name: Show shell info
         shell: bash
