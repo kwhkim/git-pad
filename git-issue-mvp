@@ -145,10 +145,11 @@ git_issue_clone() {
 
   if [ $# -eq 1 ]; then 
     remote="$1"
-  elif [ $# -gt 1 ]; then
-    echo '!E: Usage git issue clone <remote>'
-    return 1
   fi
+  # elif [ $# -lt 1 ]; then
+  #   echo '!E: Usage git issue clone <remote>'
+  #   return 1
+  # fi
 
   if ! remote=${remote:-$(resolve_issue_remote)}; then
     echo '!E: No remote, no default'
@@ -243,6 +244,7 @@ git_issue_init() {
     
     if [ $CLONE = "true" ]; then
       # Possibly post-commit hook for auto-sync issue-status(open->closed)
+      echo "- cloning the issue remote $remote"
       git_issue_clone "$remote"
       git config --local extensions.worktreeConfig true || echo 'FAILED: git config --local extensions.worktreeConfig true'
       cd "$wt" && {
