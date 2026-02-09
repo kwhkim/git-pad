@@ -19,9 +19,9 @@ jobs:
 
       - name: Clone to compare directory
         run: |
-          mkdir -p git-issue-test
-          git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} ./git-issue-test/R1
-          git clone --bare https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} ./git-issue-test/bare1.git
+          mkdir -p git-pad-test
+          git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} ./git-pad-test/R1
+          git clone --bare https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} ./git-pad-test/bare1.git
           
 
       - name: Run tests
@@ -29,56 +29,56 @@ jobs:
         #continue-on-error: true
         run: |
           PATH=$PATH:$PWD
-          cd git-issue-test && echo "git-issue-test"
+          cd git-pad-test && echo "git-pad-test"
 
           git config --global user.email "kwhkim@gha"
           git config --global user.name "kwhkim"
 
           cd R1 && echo "R1"
 
-          git issue list || true
-          git issue status || true
-          git issue remote || true
-          git issue track || true
+          git pad list || true
+          git pad status || true
+          git pad remote || true
+          git pad track || true
 
-          git issue init --no-clone
-          git issue new --title="first issue" --body="This is for testing"
-          git issue new --title="second issue" --body="This is second issue"
+          git pad init --no-clone
+          git pad new --title="first issue" --body="This is for testing"
+          git pad new --title="second issue" --body="This is second issue"
 
-          git issue status
-          git issue commit -m "R1 first commit"
+          git pad status
+          git pad commit -m "R1 first commit"
 
-          git issue list
-          git issue new --title="third issue" --body="This is the third"
-          git issue status
-          git issue commit -m "R1 second commit"
+          git pad list
+          git pad new --title="third issue" --body="This is the third"
+          git pad status
+          git pad commit -m "R1 second commit"
 
           git remote add local ../bare1.git
-          git issue track local
-          git issue push local
+          git pad track local
+          git pad push local
 
           cd ..
 
           if [ ! -d R2 ]; then git clone bare1.git R2; fi
           cd R2 && echo R2
-          git issue clone
-          git issue list
-          git issue status
+          git pad clone
+          git pad list
+          git pad status
 
-          git issue new --title="4th issue" --body="This is 4th" --type="announcement" --priority="P1"
-          git issue new --title="5th issue" --body="This happens when ..." --type="bug" --priority="P1"
-          git issue commit -m "R2 issue number 4 and 5"
+          git pad new --title="4th issue" --body="This is 4th" --type="announcement" --priority="P1"
+          git pad new --title="5th issue" --body="This happens when ..." --type="bug" --priority="P1"
+          git pad commit -m "R2 issue number 4 and 5"
 
-          git issue push
+          git pad push
           cd ..
 
           if [ ! -d R3 ]; then git clone bare1.git R3; fi
           cd R3 && echo R3
 
-          git issue init --clone
-          git issue list
-          git issue status
-          git issue pull
+          git pad init --clone
+          git pad list
+          git pad status
+          git pad pull
 
           pwd
           cd ..
@@ -88,42 +88,42 @@ jobs:
           if [ ! -d R5 ]; then git clone bare1.git R5; fi
 
           pwd
-          cd R5 && git issue init --clone && cd ..
+          cd R5 && git pad init --clone && cd ..
 
           pwd
           cd R4
-          git issue clone
+          git pad clone
 
-          id=$(git issue list | awk '{print $1}' | grep -v ID | head -1)
-          git issue comment "$id" -m "Looks good. keep it up"
+          id=$(git pad list | awk '{print $1}' | grep -v ID | head -1)
+          git pad comment "$id" -m "Looks good. keep it up"
 
-          git issue new --title="6th issue" --body="This is 6th" --type="announcement" --priority="P2"
-          git issue commit -m "R4 commit 1"
-          git issue new --title="7th issue" --body="This happens when ..." --type="bug" --priority="P2"
-          git issue commit -m "R4 commit 2"
+          git pad new --title="6th issue" --body="This is 6th" --type="announcement" --priority="P2"
+          git pad commit -m "R4 commit 1"
+          git pad new --title="7th issue" --body="This happens when ..." --type="bug" --priority="P2"
+          git pad commit -m "R4 commit 2"
 
-          git issue push
+          git pad push
           cd ..
 
           cd R3
           pwd
-          git issue pull
+          git pad pull
           cd ..
 
           cd R5
           pwd
 
-          git issue new --title="6th another issue" --body="This is 6th" --type="announcement" --priority="P2"
-          git issue commit -m "R5 commit 1b"
-          git issue new --title="7th another issue" --body="This happens when ..." --type="bug" --priority="P2"
-          git issue commit -m "R5 commit 2b"
+          git pad new --title="6th another issue" --body="This is 6th" --type="announcement" --priority="P2"
+          git pad commit -m "R5 commit 1b"
+          git pad new --title="7th another issue" --body="This happens when ..." --type="bug" --priority="P2"
+          git pad commit -m "R5 commit 2b"
 
-          id=$(git issue list | awk '{print $1}' | grep -v ID | head -1)
-          git issue comment "$id" -m "Let's get rolling."
+          id=$(git pad list | awk '{print $1}' | grep -v ID | head -1)
+          git pad comment "$id" -m "Let's get rolling."
 
-          git issue push || true
-          git issue pull
-          git issue list
+          git pad push || true
+          git pad pull
+          git pad list
 
           cd - 
 
@@ -134,7 +134,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: test-output-ubuntu
-          path: git-issue-test/artifacts/
+          path: git-pad-test/artifacts/
 
       - name: Fail if tests failed
         if: steps.tests.outcome == 'failure'
@@ -149,19 +149,19 @@ jobs:
 
       - name: Clone to compare directory
         run: |
-          mkdir -p git-issue-test
-          git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} ./git-issue-test/R1
-          git clone --bare https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} ./git-issue-test/bare1.git
+          mkdir -p git-pad-test
+          git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} ./git-pad-test/R1
+          git clone --bare https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} ./git-pad-test/bare1.git
 
       # - name: Run tests
       #   id: tests
       #   continue-on-error: true
       #   run: |
       #     PATH=$PATH:$PWD
-      #     mkdir -p git-issue-test
-      #     mkdir -p git-issue-test/artifacts
+      #     mkdir -p git-pad-test
+      #     mkdir -p git-pad-test/artifacts
       #     echo "Running tests..."
-      #     cd git-issue-test
+      #     cd git-pad-test
       #     #./run_gh_tests.sh > artifacts/test.log 2>&1
       #     bash -x ../run_test_issues.sh > artifacts/run_test_issues.log 2>&1
 
@@ -170,56 +170,56 @@ jobs:
         #continue-on-error: true
         run: |
           PATH=$PATH:$PWD
-          cd git-issue-test && echo "git-issue-test"
+          cd git-pad-test && echo "git-pad-test"
 
           git config --global user.email "kwhkim@gha"
           git config --global user.name "kwhkim"
 
           cd R1 && echo "R1"
 
-          git issue list || true
-          git issue status || true
-          git issue remote || true
-          git issue track || true
+          git pad list || true
+          git pad status || true
+          git pad remote || true
+          git pad track || true
 
-          git issue init --no-clone
-          git issue new --title="first issue" --body="This is for testing"
-          git issue new --title="second issue" --body="This is second issue"
+          git pad init --no-clone
+          git pad new --title="first issue" --body="This is for testing"
+          git pad new --title="second issue" --body="This is second issue"
 
-          git issue status
-          git issue commit -m "R1 first commit"
+          git pad status
+          git pad commit -m "R1 first commit"
 
-          git issue list
-          git issue new --title="third issue" --body="This is the third"
-          git issue status
-          git issue commit -m "R1 second commit"
+          git pad list
+          git pad new --title="third issue" --body="This is the third"
+          git pad status
+          git pad commit -m "R1 second commit"
 
           git remote add local ../bare1.git
-          git issue track local
-          git issue push local
+          git pad track local
+          git pad push local
 
           cd ..
 
           if [ ! -d R2 ]; then git clone bare1.git R2; fi
           cd R2 && echo R2
-          git issue clone
-          git issue list
-          git issue status
+          git pad clone
+          git pad list
+          git pad status
 
-          git issue new --title="4th issue" --body="This is 4th" --type="announcement" --priority="P1"
-          git issue new --title="5th issue" --body="This happens when ..." --type="bug" --priority="P1"
-          git issue commit -m "R2 issue number 4 and 5"
+          git pad new --title="4th issue" --body="This is 4th" --type="announcement" --priority="P1"
+          git pad new --title="5th issue" --body="This happens when ..." --type="bug" --priority="P1"
+          git pad commit -m "R2 issue number 4 and 5"
 
-          git issue push
+          git pad push
           cd ..
 
           if [ ! -d R3 ]; then git clone bare1.git R3; fi
           cd R3 && echo R3
 
-          git issue init --clone
-          git issue list
-          git issue status
-          git issue pull
+          git pad init --clone
+          git pad list
+          git pad status
+          git pad pull
 
           pwd
           cd ..
@@ -229,42 +229,42 @@ jobs:
           if [ ! -d R5 ]; then git clone bare1.git R5; fi
 
           pwd
-          cd R5 && git issue init --clone && cd ..
+          cd R5 && git pad init --clone && cd ..
 
           pwd
           cd R4
-          git issue clone
+          git pad clone
 
-          id=$(git issue list | awk '{print $1}' | grep -v ID | head -1)
-          git issue comment "$id" -m "Looks good. keep it up"
+          id=$(git pad list | awk '{print $1}' | grep -v ID | head -1)
+          git pad comment "$id" -m "Looks good. keep it up"
 
-          git issue new --title="6th issue" --body="This is 6th" --type="announcement" --priority="P2"
-          git issue commit -m "R4 commit 1"
-          git issue new --title="7th issue" --body="This happens when ..." --type="bug" --priority="P2"
-          git issue commit -m "R4 commit 2"
+          git pad new --title="6th issue" --body="This is 6th" --type="announcement" --priority="P2"
+          git pad commit -m "R4 commit 1"
+          git pad new --title="7th issue" --body="This happens when ..." --type="bug" --priority="P2"
+          git pad commit -m "R4 commit 2"
 
-          git issue push
+          git pad push
           cd ..
 
           cd R3
           pwd
-          git issue pull
+          git pad pull
           cd ..
 
           cd R5
           pwd
 
-          git issue new --title="6th another issue" --body="This is 6th" --type="announcement" --priority="P2"
-          git issue commit -m "R5 commit 1b"
-          git issue new --title="7th another issue" --body="This happens when ..." --type="bug" --priority="P2"
-          git issue commit -m "R5 commit 2b"
+          git pad new --title="6th another issue" --body="This is 6th" --type="announcement" --priority="P2"
+          git pad commit -m "R5 commit 1b"
+          git pad new --title="7th another issue" --body="This happens when ..." --type="bug" --priority="P2"
+          git pad commit -m "R5 commit 2b"
 
-          id=$(git issue list | awk '{print $1}' | grep -v ID | head -1)
-          git issue comment "$id" -m "Let's get rolling."
+          id=$(git pad list | awk '{print $1}' | grep -v ID | head -1)
+          git pad comment "$id" -m "Let's get rolling."
 
-          git issue push || true
-          git issue pull
-          git issue list
+          git pad push || true
+          git pad pull
+          git pad list
 
           cd - 
 
@@ -290,9 +290,9 @@ jobs:
 
       - name: Clone to compare directory
         run: |
-          mkdir -p git-issue-test
-          git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} ./git-issue-test/R1
-          git clone --bare https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} ./git-issue-test/bare1.git
+          mkdir -p git-pad-test
+          git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} ./git-pad-test/R1
+          git clone --bare https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} ./git-pad-test/bare1.git
 
       - name: Show shell info
         shell: bash
@@ -312,10 +312,10 @@ jobs:
       #   continue-on-error: true
       #   run: |
       #     PATH=$PATH:$PWD
-      #     mkdir -p git-issue-test
-      #     mkdir -p git-issue-test/artifacts
+      #     mkdir -p git-pad-test
+      #     mkdir -p git-pad-test/artifacts
       #     echo "Running tests..."
-      #     cd git-issue-test
+      #     cd git-pad-test
       #     #./run_gh_tests.sh > artifacts/test.log 2>&1
       #     bash -x ../run_test_issues.sh > artifacts/run_test_issues.log 2>&1
 
@@ -325,56 +325,56 @@ jobs:
         #continue-on-error: true
         run: |
           PATH=$PATH:$PWD
-          cd git-issue-test && echo "git-issue-test"
+          cd git-pad-test && echo "git-pad-test"
 
           git config --global user.email "kwhkim@gha"
           git config --global user.name "kwhkim"
 
           cd R1 && echo "R1"
 
-          git issue list || true
-          git issue status || true
-          git issue remote || true
-          git issue track || true
+          git pad list || true
+          git pad status || true
+          git pad remote || true
+          git pad track || true
 
-          git issue init --no-clone
-          git issue new --title="first issue" --body="This is for testing"
-          git issue new --title="second issue" --body="This is second issue"
+          git pad init --no-clone
+          git pad new --title="first issue" --body="This is for testing"
+          git pad new --title="second issue" --body="This is second issue"
 
-          git issue status
-          git issue commit -m "R1 first commit"
+          git pad status
+          git pad commit -m "R1 first commit"
 
-          git issue list
-          git issue new --title="third issue" --body="This is the third"
-          git issue status
-          git issue commit -m "R1 second commit"
+          git pad list
+          git pad new --title="third issue" --body="This is the third"
+          git pad status
+          git pad commit -m "R1 second commit"
 
           git remote add local ../bare1.git
-          git issue track local
-          git issue push local
+          git pad track local
+          git pad push local
 
           cd ..
 
           if [ ! -d R2 ]; then git clone bare1.git R2; fi
           cd R2 && echo R2
-          git issue clone
-          git issue list
-          git issue status
+          git pad clone
+          git pad list
+          git pad status
 
-          git issue new --title="4th issue" --body="This is 4th" --type="announcement" --priority="P1"
-          git issue new --title="5th issue" --body="This happens when ..." --type="bug" --priority="P1"
-          git issue commit -m "R2 issue number 4 and 5"
+          git pad new --title="4th issue" --body="This is 4th" --type="announcement" --priority="P1"
+          git pad new --title="5th issue" --body="This happens when ..." --type="bug" --priority="P1"
+          git pad commit -m "R2 issue number 4 and 5"
 
-          git issue push
+          git pad push
           cd ..
 
           if [ ! -d R3 ]; then git clone bare1.git R3; fi
           cd R3 && echo R3
 
-          git issue init --clone
-          git issue list
-          git issue status
-          git issue pull
+          git pad init --clone
+          git pad list
+          git pad status
+          git pad pull
 
           pwd
           cd ..
@@ -384,42 +384,42 @@ jobs:
           if [ ! -d R5 ]; then git clone bare1.git R5; fi
 
           pwd
-          cd R5 && git issue init --clone && cd ..
+          cd R5 && git pad init --clone && cd ..
 
           pwd
           cd R4
-          git issue clone
+          git pad clone
 
-          id=$(git issue list | awk '{print $1}' | grep -v ID | head -1)
-          git issue comment "$id" -m "Looks good. keep it up"
+          id=$(git pad list | awk '{print $1}' | grep -v ID | head -1)
+          git pad comment "$id" -m "Looks good. keep it up"
 
-          git issue new --title="6th issue" --body="This is 6th" --type="announcement" --priority="P2"
-          git issue commit -m "R4 commit 1"
-          git issue new --title="7th issue" --body="This happens when ..." --type="bug" --priority="P2"
-          git issue commit -m "R4 commit 2"
+          git pad new --title="6th issue" --body="This is 6th" --type="announcement" --priority="P2"
+          git pad commit -m "R4 commit 1"
+          git pad new --title="7th issue" --body="This happens when ..." --type="bug" --priority="P2"
+          git pad commit -m "R4 commit 2"
 
-          git issue push
+          git pad push
           cd ..
 
           cd R3
           pwd
-          git issue pull
+          git pad pull
           cd ..
 
           cd R5
           pwd
 
-          git issue new --title="6th another issue" --body="This is 6th" --type="announcement" --priority="P2"
-          git issue commit -m "R5 commit 1b"
-          git issue new --title="7th another issue" --body="This happens when ..." --type="bug" --priority="P2"
-          git issue commit -m "R5 commit 2b"
+          git pad new --title="6th another issue" --body="This is 6th" --type="announcement" --priority="P2"
+          git pad commit -m "R5 commit 1b"
+          git pad new --title="7th another issue" --body="This happens when ..." --type="bug" --priority="P2"
+          git pad commit -m "R5 commit 2b"
 
-          id=$(git issue list | awk '{print $1}' | grep -v ID | head -1)
-          git issue comment "$id" -m "Let's get rolling."
+          id=$(git pad list | awk '{print $1}' | grep -v ID | head -1)
+          git pad comment "$id" -m "Let's get rolling."
 
-          git issue push || true
-          git issue pull
-          git issue list
+          git pad push || true
+          git pad pull
+          git pad list
 
           cd - 
 
