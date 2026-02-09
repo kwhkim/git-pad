@@ -48,7 +48,7 @@ that uses custom refs(`refs/issues/latest`, `refs/remote/$REMOTE/issues/latest`)
 ## Usage
 
 ```{bash}
-PATH=$PATH:$(pwd)  # replace $(pwd) with the directory name where git-pad, git-pad-func.sh live
+PATH=$PATH:$(pwd)  # replace $(pwd) with the directory name where git-pad, git-pad-utils live
 git pad init # or git pad clone if there is already remote 
 git pad list
 # A
@@ -131,3 +131,16 @@ git pad list
 * [reddit: What is your simple issue tracking system](https://www.reddit.com/r/git/comments/wg6mk6/what_is_your_simple_issue_tracking_system/)
 * [StackOverflow: Is possible to store repository issues in the git repository?](https://stackoverflow.com/questions/19938579/is-possible-to-store-repository-issues-in-the-git-repository)
 * [StackOverflow: Keeping track of To-Do and issues in Git](https://stackoverflow.com/questions/7060973/keeping-track-of-to-do-and-issues-in-git)
+
+## To-Dos
+
+* github bridge
+  * Download github issue list from `$REPO`(in `gh_list_vars.sh`)
+  * `gh_list_vars.sh`
+  * `gh_list_init.sh`
+  * `gh_list_download.sh`, `gh_list_download_stopped.sh`
+  * `gh_list_export.sh`
+  
+* gitlab bridge
+
+You can see the list of issues, todos in the git-embedded issues using `git-pad`.
