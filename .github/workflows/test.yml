@@ -31,6 +31,9 @@ jobs:
           PATH=$PATH:$PWD
           cd git-issue-test && echo "git-issue-test"
 
+          git config --global user.email "kwhkim@gha"
+          git config --global user.name "kwhkim"
+
           cd R1 && echo "R1"
 
           git issue list || true
