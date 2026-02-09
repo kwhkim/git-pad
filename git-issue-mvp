@@ -1696,18 +1696,18 @@ git_issue_fetch() {
   #   }
 
   if [ ${#opts[@]} -gt 0 ]; then
-  git fetch "${opts[@]}" "$remote" \
-    "$(issue_ref):$(remote_issue_ref "$remote")" || {
-      echo "fetch failed"
-      return 1
-    }
-else
-  git fetch "$remote" \
-    "$(issue_ref):$(remote_issue_ref "$remote")" || {
-      echo "fetch failed"
-      return 1
-    }
-fi
+    git fetch "${opts[@]}" "$remote" \
+      "$(issue_ref):$(remote_issue_ref "$remote")" || {
+        echo "fetch failed"
+        return 1
+      }
+  else
+    git fetch "$remote" \
+      "$(issue_ref):$(remote_issue_ref "$remote")" || {
+        echo "fetch failed"
+        return 1
+      }
+  fi
 }
 
 # clone-issue workflow:
@@ -1832,7 +1832,7 @@ git_issue_merge() {
 
       new_opts=()
       local ff=1
-      for opt in "${opts[@]}"; do
+      for opt in ${opts[@]+"${opts[@]}"}; do
         #if [[ "$opt" != "--ff" && "$opt" != "--no-ff" ]]; then
         #  new_opts+=("$opt")
         if [[ "$opt" = "--ff" ]]; then
@@ -1842,12 +1842,12 @@ git_issue_merge() {
           new_opts+=("$opt")
         fi
       done
-      opts=("${new_opts[@]}")
+      opts=("${new_opts[@]+"${new_opts[@]}"}")
 
       if [[ $ff -eq 1 ]]; then
-        git merge --ff "${opts[@]}" "$remote_oid"
+        git merge --ff ${opts[@]+"${opts[@]}"} "$remote_oid"
       else
-        git merge "${opts[@]}" "$remote_oid"
+        git merge ${opts[@]+"${opts[@]}"} "$remote_oid"
       fi
 
       git update-ref "$local_ref" HEAD
@@ -1871,7 +1871,7 @@ git_issue_merge() {
         echo "rebase failed, falling back to merge..."
         git update-ref -d "$ref_audit"
         git rebase --abort > /dev/null 2>&1
-        if git merge "${opts[@]}" "$remote_oid"; then
+        if git merge ${opts[@]+"${opts[@]}"} "$remote_oid"; then
           git update-ref "$local_ref" HEAD
           return 0
         fi

@@ -6,8 +6,10 @@
 # if [ -d bare1.git ]; then rm bare1.git || rm -rf bare1.git; fi
 # git clone --bare git@github.com:kwhkim/git-issue.git bare1.git
 
+cd git-issue-test && echo "git-issue-test"
 
-cd R1
+cd R1 && echo "R1"
+
 git issue list 
 git issue status 
 git issue remote
@@ -32,7 +34,7 @@ git issue push local
 cd ..
 
 if [ ! -d R2 ]; then git clone bare1.git R2; fi
-cd R2
+cd R2 && echo R2
 git issue clone
 git issue list
 git issue status
@@ -45,7 +47,7 @@ git issue push
 cd ..
 
 if [ ! -d R3 ]; then git clone bare1.git R3; fi
-cd R3
+cd R3 && echo R3
 
 git issue init --clone
 git issue list
@@ -78,10 +80,12 @@ git issue push
 cd ..
 
 cd R3
+pwd
 git issue pull
 cd ..
 
 cd R5
+pwd
 
 git issue new --title="6th another issue" --body="This is 6th" --type="announcement" --priority="P2"
 git issue commit -m "R5 commit 1b"
