@@ -1948,3 +1948,72 @@ git_issue_status() {
     # fi
   )
 }
+
+git_issue_remove() {
+  cwd=$(pwd)
+  wt="$(git_issue_worktree)"
+  root="$(git_project_root)"
+
+  if ! safe_cd "$wt"; then
+    echo '!E: '"issue folder $wt does not exit"
+    return 1
+  fi
+
+  FORCE=ask
+  for arg in "$@"; do
+    case $arg in
+      --force|-f) FORCE=true ;;
+      --no-force|-n) FORCE=false ;;
+    esac
+  done
+
+  st=$(git status --porcelain)
+  if [ -n "$st" ]; then
+    echo '!W: '"There are still uncommitted contents in $wt"
+    if [ $FORCE = "ask" ]; then
+      while true; do
+        read -p '  - Do you want to remove anyway? (Y/N) ' ans
+        case "$ans" in
+          [Yy])
+            FORCE=true
+            break
+            ;;
+          [Nn])
+            FORCE=false
+            break
+            ;;
+        esac
+      done
+      if [ $FORCE = "false" ]; then
+        echo '  - Aborted.'
+        return 1
+      fi
+    fi
+  fi
+
+  remote=${remote:-$(resolve_issue_remote)}
+
+  if ! safe_cd "$root"; then
+     echo '!E :'"Can't change directoroy to git root"
+     return 1
+  fi
+  
+  if [ $FORCE = "true" ]; then
+    #issue_git worktree remove --force "$wt"
+    git worktree remove --force "$wt"
+  else
+    git worktree remove "$wt"
+  fi
+  git update-ref -d "$(issue_ref)"
+  git update-ref -d "$(remote_issue_ref "$remote")"
+  #! git worktree나 git update-ref는 꼭 $wt에서 하지 않아도 된다!
+
+  echo '!I: '"worktree $wt DELETED"
+  echo "  - ref $(issue_ref) DELETED"
+  echo "  - ref $(remote_issue_ref "$remote") DELETED"
+
+  if ! safe_cd "$cwd"; then
+     echo '!E :'"Can't change directoroy back to original directory"
+     return 1
+  fi
+}
