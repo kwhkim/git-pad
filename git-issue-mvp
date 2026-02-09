@@ -859,7 +859,8 @@ git_issue_log() {
   root="$(git_project_root)"
   wt=$(git_issue_worktree)
   if ! remote_tracking=$(git config --get issue.remote); then 
-    remote_tracking=${remote_tracking:-$(resolve_issue_remote)}; fi
+    remote_tracking=${remote_tracking:-$(resolve_issue_remote)}; 
+  fi
 
   local audit=0
 
@@ -872,7 +873,24 @@ git_issue_log() {
     esac
   done
 
-  
+  if ! safe_cd $wt; then
+    #echo 'No .issue folder'
+    echo "Issue worktree not yet initiated(.issues does not exist)" >&2
+    echo "  - use 'git issue init' to create one" >&2
+    return 1
+  fi
+
+  if ! git -C "$root/.issues" rev-parse refs/remotes/"$remote_tracking"/issues/latest >/dev/null 2>&1; then
+    ref_remote_tracking=""
+    # if ! git issue fetch "$remote_tracking"; then 
+    #   echo '!E: git issue fetch '"$remote_tracking"' failed!'
+    #   ref_remote_tracking=""
+    # else
+    #   ref_remote_tracking=refs/remotes/"$remote_tracking"/issues/latest
+    # fi
+  else
+    ref_remote_tracking=refs/remotes/"$remote_tracking"/issues/latest
+  fi
 
   if [[ $audit -eq 1 ]]; then
 
@@ -894,9 +912,10 @@ git_issue_log() {
       --decorate-refs=refs/remotes/"$remote_tracking"/issues/latest \
       --decorate-refs=refs/issues/audit/* \
       --decorate-refs-exclude=refs/heads/* \
-      --glob='refs/issues/audit/*' \
-      HEAD refs/issues/latest refs/remotes/"$remote_tracking"/issues/latest \
-      $@ #\
+      --glob='refs/issues/*' \
+      $@ \
+      HEAD refs/issues/latest $ref_remote_tracking
+       #\
     #--decorate-refs=refs/issues/audit/"$local_id"
   else
     git -C "$root/.issues" log --oneline --graph \
@@ -904,10 +923,12 @@ git_issue_log() {
       --decorate-refs=refs/issues/latest \
       --decorate-refs=refs/remotes/"$remote_tracking"/issues/latest \
       --decorate-refs-exclude=refs/heads/* \
-      HEAD refs/issues/latest refs/remotes/"$remote_tracking"/issues/latest \
-      $@ #\
+      $@ \
+      HEAD refs/issues/latest $ref_remote_tracking 
+       #\
     #--decorate-refs=refs/issues/audit/"$local_id"
   fi
+  cd - >/dev/null || return 1
 }
 
 # git_issue_list() {
