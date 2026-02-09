@@ -1633,6 +1633,7 @@ git_issue_push() {
 }
 
 git_issue_fetch() {
+  #set -x
   local remote=
   local opts=()
 
@@ -1647,7 +1648,11 @@ git_issue_fetch() {
     esac
   done
 
-  remote=${remote:-$(resolve_issue_remote)}
+  if ! remote=${remote:-$(resolve_issue_remote)}; then
+    echo '!E: No remote and no default'
+    echo '- Usage: git issue fetch <remote>'
+    return 1
+  fi
 
   local local_ref remote_ref
   local_ref=$(issue_ref)
@@ -1665,12 +1670,15 @@ git_issue_fetch() {
     return 1
   fi
 
-  LOCAL_SHA=$(git rev-parse "$remote_ref")
+
+
+  if LOCAL_SHA=$(git rev-parse "$remote_ref" 2> /dev/null); then
   #echo "$REMOTE_SHA"
 
-  if [ "$LOCAL_SHA" = "$REMOTE_SHA" ]; then
-    echo "Nothing to fetch: local remote-tracking issue snapshot is up-to-date with '$remote'"
-    return 0
+    if [ "$LOCAL_SHA" = "$REMOTE_SHA" ]; then
+      echo "Nothing to fetch: local remote-tracking issue snapshot is up-to-date with '$remote'"
+      return 0
+    fi
   fi
 
   git fetch "${opts[@]}" "$remote" \
