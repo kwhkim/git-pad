@@ -956,8 +956,32 @@ count_comments() {
 }
 
 git_issue_show() {
+  if [ $# -lt 1 ]; then
+    echo '!E: Usage git issue show <id>' 
+    return 1
+  fi
+
+  PRINT_COMMENTS=ask
+  for arg in "$@"; do
+    case "$arg" in
+      --help)
+        echo '- Usage: git issue show [--comments|--no-comments] <id>'
+        return 1
+        ;;
+      --comments)
+        PRINT_COMMENTS=true
+        ;;
+      --no-comments)
+        PRINT_COMMENTS=false
+        ;;
+      *)
+        id="$arg"
+        ;;
+    esac
+  done
+
+  id="$(parse_issue_id "$id")" || return 1
   id=${id%.md}
-  id="$(parse_issue_id "$1")" || return 1
   [ -z "$id" ] && echo "usage: git issue show <id>" && return 1
 
   #if ! is_int "$id"; then echo 'usage: git issue show <id>'; echo '  <id> should be an integer'; return 1;
@@ -971,6 +995,8 @@ git_issue_show() {
     echo "Issue $id not found"
     return 1
   }
+
+  echo ''
   print_hline
   echo "ISSUE-FILE: issues/$id.md"
   sed -n '1,200p' "$file"
@@ -982,21 +1008,29 @@ git_issue_show() {
   echo ""
 
   if [ "$num_comments" -gt 0 ]; then
-    while :; do
-      printf "%s" "--->8 Continue to comments? (Y/N) "
-      read -r ans
-      case "$ans" in
-        [Nn])
-          return 0
-          ;;
-        [Yy])
-          break
-          ;;
-        *)
-          # Invalid input, loop continues
-          ;;
-      esac
-    done
+    if [ $PRINT_COMMENTS = "ask" ]; then
+      while :; do
+        printf "%s" "--->8 Continue to comments? (Y/N) "
+        read -r ans
+        case "$ans" in
+          [Nn])
+            PRINT_COMMENTS=false
+            break
+            ;;
+          [Yy])
+            PRINT_COMMENTS=true
+            break
+            ;;
+          *)
+            # Invalid input, loop continues
+            ;;
+        esac
+      done
+    fi
+
+    if [ $PRINT_COMMENTS = "false" ]; then
+      return 0
+    fi
 
     DIR_COMMENT="$wt/issues/$id/comments"
 
