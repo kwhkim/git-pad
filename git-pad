@@ -1,0 +1,43 @@
+#!/bin/bash
+set -eu
+
+. git-pad-utils
+. new_filename.sh
+
+if ! cmd=$1; then
+  cmd='help'
+fi
+
+shift
+
+case "$cmd" in
+  init)    git_pad_init "$@" ;;
+  clone)   git_pad_clone "$@" ;;
+  edit)    git_pad_edit "$@" ;;
+  new)     git_pad_new "$@" ;;
+  status)  git_pad_status "$@" ;;
+  commit)  git_pad_commit "$@" ;;
+  comment) git_pad_comment "$@" ;;
+  log)     git_pad_log "$@" ;;
+  list)    git_pad_list "$@" ;;
+  list-full) git_pad_list_full "$@" ;; 
+  show)    git_pad_show "$@" ;;
+  search)  git_pad_search "$@" ;;
+  push)    git_pad_push "$@";;
+  fetch)   git_pad_fetch "$@" ;;
+  merge)   git_pad_merge "$@" ;;
+  pull)    git_pad_fetch "$@"
+           git_pad_merge --rebase --audit 
+           git_pad_push "$@" ;;
+  remote)  git_pad_track "$@" ;;
+  track)   git_pad_track "$@" ;;
+  remove)  git_pad_remove "$@" ;;
+  version) git_pad_version "$@" ;;
+
+  *)
+    echo "usage for local   : git pad <init|edit|status|commit|comment|log|list|list-full|show|search|remove>"
+    echo "      for remotes : git pad <clone|track|push|pull|fetch|merge>"
+    echo "                  : git pad version"
+    exit 1
+    ;;
+esac

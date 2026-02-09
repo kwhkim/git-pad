@@ -1,4 +1,4 @@
-# git-issue
+# git-pad
 
 ## Philosophy
 
@@ -44,33 +44,33 @@
 
 ```{bash}
 PATH=$PATH:$(pwd)  # replace $(pwd) with the directory name where git-pad, git-pad-func.sh live
-git issue init # or git issue clone if there is already remote 
-git issue list
+git pad init # or git pad clone if there is already remote 
+git pad list
 # A
 
-git issue show $ISSUE_ID
-git issue comment $ISSUE_ID
+git pad show $ISSUE_ID
+git pad comment $ISSUE_ID
 
-git issue new # or git issue edit $ISSUE_ID
-git issue edit $ISSUE_ID
-git issue comment $ISSUE_ID
-git issue status
-git issue commit
+git pad new # or git pad edit $ISSUE_ID
+git pad edit $ISSUE_ID
+git pad comment $ISSUE_ID
+git pad status
+git pad commit
 
-git issue fetch
-git issue merge
-# When conflicts, git issue edit $ISSUE_ID
-git issue push
+git pad fetch
+git pad merge
+# When conflicts, git pad edit $ISSUE_ID
+git pad push
 
-git issue list
+git pad list
 # goes to A
 ```
 
 ## Implementation detail
 
 * Git-Embedded Distributed Issues Management System
-  * `git-issue` : dispatcher for commands like `git issue init`, `git issue new`, etc.
-    * `git-issue-mvp` : functions like `git_issue_init`
+  * `git-pad` : dispatcher for commands like `git pad init`, `git pad new`, etc.
+    * `git-pad-utils` : functions like `git_pad_init`
     * `new_filename.sh` 
       * `gen_repo_id` : random 6 alphabets
       * `repo_id_in_use $1` : check if `$1` is used in any issue file
@@ -82,6 +82,9 @@ git issue list
     * Forward time slice scan first, then Backward time slice scan.
   * `gh_list_state.json`
     * Stores the coverage of github issues updates
+
+* History
+  * Originally named `git-issue`. But there is already another project named `git-issue`(see Related Projects), so it was renamed to **git-pad**. So the filename and functions are all renamed to **pad**(commit `...`).
 
   
 ## Related Projects(as-of 2026.02.04)
