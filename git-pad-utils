@@ -444,8 +444,9 @@ git_pad_edit() {
   [ $# -eq 0 ] && { echo "usage: git pad comment <issue id>"; return 1; } 
 
   #echo gie1
+  id="$1"
   id=${id%.md}
-  id="$(parse_issue_id "$1")" || return 1
+  id="$(parse_issue_id "$id")" || return 1
 
   #echo gie2
   fn_md="$id".md
@@ -1130,6 +1131,9 @@ git_pad_list() {
 
     id=$(basename "$f" .md)
     num_comments=$(count_comments "$id")
+    if [ "$num_comments" -eq 0 ]; then
+      num_comments=" "
+    fi
 
     awk -v mtime="$mtime" -v id="$id" -v n_cmt="$num_comments" \
         -v target_status="$filter_status" -v target_type="$filter_type" '
@@ -1165,7 +1169,7 @@ git_pad_list() {
   if [[ -n "$sorted_data" ]]; then
     while IFS="$US" read -r mt id st ty pr cm ti; do
       [[ -z "$id" ]] && continue
-      printf "%-13s %-8s %-8s %-3s %4d %s\n" \
+      printf "%-13s %-8s %-8s %-3s %4s %s\n" \
         "$id" "${st:0:8}" "${ty:0:8}" "${pr:0:3}" "$cm" "$ti"
     done <<< "$sorted_data"
   fi
