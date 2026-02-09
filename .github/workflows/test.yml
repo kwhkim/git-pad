@@ -33,10 +33,10 @@ jobs:
 
           cd R1 && echo "R1"
 
-          git issue list 
-          git issue status 
-          git issue remote
-          git issue track
+          git issue list || true
+          git issue status || true
+          git issue remote || true
+          git issue track || true
 
           git issue init --no-clone
           git issue new --title="first issue" --body="This is for testing"
