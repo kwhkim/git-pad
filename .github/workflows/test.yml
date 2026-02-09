@@ -28,6 +28,7 @@ jobs:
         id: tests
         #continue-on-error: true
         run: |
+          PATH=$PATH:$PWD
           cd git-issue-test && echo "git-issue-test"
 
           cd R1 && echo "R1"
