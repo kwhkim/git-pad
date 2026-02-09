@@ -125,7 +125,11 @@ issue_audit_ref() {
 
 remote_issue_ref() {
   local remote="$1"
-  echo "refs/remotes/$remote/issues/latest"
+  #if git config --get remote."$remote".url > /dev/null 2>&1; then
+    echo "refs/remotes/$remote/issues/latest"
+  #else
+  #  echo $remote
+  #fi
 }
 
 issue_git() {
@@ -1617,7 +1621,7 @@ git_issue_push() {
   fi
 
   if git push "$remote" "$L:$L"; then
-    echo "- Push successful"
+    echo "- Push to $remote successful"
     if git_issue_fetch "$remote"; then
       echo "- Local snapshot updated"
     else
@@ -1684,12 +1688,26 @@ git_issue_fetch() {
   fi
 
   # an older version of Bash on macOS. macOS ships with Bash 3.2 by default, which has a bug where "${opts[@]}" fails with set -u even when the array is initialized as empty.
-  git fetch ${opts[@]+"${opts[@]}"} "$remote" \
-    "$(issue_ref):$(remote_issue_ref "$remote")" ||
-    {
+  # git fetch ${opts[@]+"${opts[@]}"} "$remote" \
+  #   "$(issue_ref):$(remote_issue_ref "$remote")" ||
+  #   {
+  #     echo "fetch failed"
+  #     return 1
+  #   }
+
+  if [ ${#opts[@]} -gt 0 ]; then
+  git fetch "${opts[@]}" "$remote" \
+    "$(issue_ref):$(remote_issue_ref "$remote")" || {
       echo "fetch failed"
       return 1
     }
+else
+  git fetch "$remote" \
+    "$(issue_ref):$(remote_issue_ref "$remote")" || {
+      echo "fetch failed"
+      return 1
+    }
+fi
 }
 
 # clone-issue workflow:
