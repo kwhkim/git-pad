@@ -14,13 +14,14 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      #- name: Checkout
-      #  uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Clone to compare directory
         run: |
-          git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} ./R1
-          git clone --bare https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} ./bare1.git
+          mkdir -p git-issue-test
+          git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} ./git-issue-test/R1
+          git clone --bare https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} ./git-issue-test/bare1.git
           
 
       - name: Run tests
@@ -49,8 +50,8 @@ jobs:
     runs-on: macos-latest
 
     steps:
-      #- name: Checkout
-      #  uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Clone to compare directory
         run: |
@@ -83,8 +84,8 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      #- name: Checkout
-      #  uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Clone to compare directory
         run: |
