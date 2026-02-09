@@ -2,7 +2,7 @@
 title: Make it MacOS-compatible
 type: enhancement
 priority: P1
-status: open
+status: closed
 ---
 
 ## Description
@@ -24,6 +24,7 @@ and test
 * git pad edit
 * git pad comment
 
+-> `run_gh_test.sh` and `.github/workflows/test.yml` for GHA
 
 ## Steps to Reproduce
 

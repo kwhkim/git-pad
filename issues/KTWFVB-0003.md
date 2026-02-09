@@ -2,7 +2,7 @@
 title: .gitignore in .issues folder
 type: bug
 priority: P1
-status: open
+status: closed
 ---
 
 ## Description
