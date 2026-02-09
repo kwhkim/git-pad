@@ -4,11 +4,13 @@ set -eu
 . git-pad-utils
 . new_filename.sh
 
-if ! cmd=$1; then
+#echo $#
+if [ $# -gt 0 ]; then
+  cmd=$1
+  shift
+else
   cmd='help'
 fi
-
-shift
 
 case "$cmd" in
   init)    git_pad_init "$@" ;;
@@ -36,7 +38,7 @@ case "$cmd" in
 
   *)
     echo "usage for local   : git pad <init|edit|status|commit|comment|log|list|list-full|show|search|remove>"
-    echo "      for remotes : git pad <clone|track|push|pull|fetch|merge>"
+    echo "      for remotes : git pad <clone|track|remote|push|pull|fetch|merge>"
     echo "                  : git pad version"
     exit 1
     ;;

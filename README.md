@@ -1,12 +1,17 @@
 # git-pad
 
+A **lightweight** **git-embedded** _issue tracking tool_
+that uses custom refs(`refs/issues/latest`, `refs/remote/$REMOTE/issues/latest`)
+
 ## Philosophy
 
-* most commands are just like git commands 
-  * status,commit,push,fetch,merge
-
-* No staginag area
-  * commit = add + commit (in git) 
+* run `git pad $COMMAND`
+  * most commands are just like git commands 
+    * `init`, `clone`, `log`, `status`, `commit`, `push`, `fetch`, `merge`, `pull`, `remote`
+  * some are for issue managing
+    * `new`, `list`, `show`, `comment`, `edit`, `search`, `remove`
+  * No staginag area
+    * `commit` = `add` + `commit` (in git) 
   
 ## Design
 
