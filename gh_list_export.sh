@@ -1,5 +1,6 @@
 #!/bin/bash
-set -euo pipefail
+#set -euo pipefail
+set -eu
 #set -euo
 # gh db to markdown text
 
@@ -19,32 +20,17 @@ git_project_root() {
   #   returns . in the root directory
 }
 root=$(git_project_root)
-DIR_GITHUB="$root/.issues/github"
+DIR_GITHUB="$root/$GITHUB_WT_FOLDER"
 
-if [[ -d "$DIR_GITHUB" ]]; then
-  if cd "$DIR_GITHUB" && git rev-parse --git-dir | grep 'worktrees/github$'; then
-    echo "- Using existing git worktree at $DIR_GITHUB"
-    cd - >/dev/null || exit 1
-  else
-    echo "- ERROR: $DIR_GITHUB exists and is not a git worktree for github."
-    exit 1
-  fi
-else
-  tmp_ref="refs/issues/tmp/$(date +%s)-$$"
-  git worktree add --orphan -B "$tmp_ref" "$DIR_GITHUB"
-  cd "$DIR_GITHUB" || exit 1
-  git commit --allow-empty -m "start github issues" 
-  git update-ref refs/issues/github/latest HEAD
-  git checkout --detach 
-  git branch -D "$tmp_ref"
-  echo "- Created new git worktree at $DIR_GITHUB"
-fi
+
 
 # worktrees for shards
 #mkdir -p github
 
 echo "- Exporting issues in DB_FILE($DB_FILE) to markdown files in $DIR_GITHUB ..."
-last_number=$(sqlite3 $DB_FILE "SELECT max(number) FROM issues;")
+sqlite3 "$DB_FILE" ".tables"
+sqlite3 "$DB_FILE" "SELECT max(number) FROM issues;"
+last_number=$(sqlite3 "$DB_FILE" "SELECT max(number) FROM issues;")
 echo "- last issue number: $last_number"
 # max_shard=$(shard "$last_number")
 # maxi=$(dirname "$max_shard" | cut -d'/' -f1)
@@ -68,6 +54,28 @@ echo "Counting total issues..." >&2
 total=$(sqlite3 "$DB_FILE" "SELECT COUNT(*) FROM issues;")
 echo "Total issues: $total" >&2
 echo "" >&2
+
+if [[ -d "$DIR_GITHUB" ]]; then
+  if cd "$DIR_GITHUB" && git rev-parse --git-dir | grep 'worktrees/github$'; then
+    echo "- Using existing git worktree at $DIR_GITHUB"
+    cd - >/dev/null || exit 1
+  else
+    echo "- ERROR: $DIR_GITHUB exists and is not a git worktree for github."
+    exit 1
+  fi
+else
+  tmp_ref="refs/issues/tmp/$(date +%s)-$$"
+  git worktree add --orphan -B "$tmp_ref" "$DIR_GITHUB"
+  cd "$DIR_GITHUB" || exit 1
+  git commit --allow-empty -m "start github issues" 
+  git update-ref refs/issues/github/latest HEAD
+  git checkout --detach 
+  git branch -D "$tmp_ref"
+  echo "- Created new git worktree at $DIR_GITHUB"
+  cd - 
+  bash migrate_worktree_config.sh
+fi
+
 
 processed=0
 
