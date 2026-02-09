@@ -140,86 +140,298 @@ jobs:
         if: steps.tests.outcome == 'failure'
         run: exit 1
 
-  # test-macos:
-  #   runs-on: macos-latest
+  test-macos:
+    runs-on: macos-latest
 
-  #   steps:
-  #     - name: Checkout
-  #       uses: actions/checkout@v4
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-  #     - name: Clone to compare directory
-  #       run: |
-  #         mkdir -p git-issue-test
-  #         git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} ./git-issue-test/R1
-  #         git clone --bare https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} ./git-issue-test/bare1.git
+      - name: Clone to compare directory
+        run: |
+          mkdir -p git-issue-test
+          git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} ./git-issue-test/R1
+          git clone --bare https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} ./git-issue-test/bare1.git
 
-  #     - name: Run tests
-  #       id: tests
-  #       continue-on-error: true
-  #       run: |
-  #         PATH=$PATH:$PWD
-  #         mkdir -p git-issue-test
-  #         mkdir -p git-issue-test/artifacts
-  #         echo "Running tests..."
-  #         cd git-issue-test
-  #         #./run_gh_tests.sh > artifacts/test.log 2>&1
-  #         bash -x ../run_test_issues.sh > artifacts/run_test_issues.log 2>&1
+      # - name: Run tests
+      #   id: tests
+      #   continue-on-error: true
+      #   run: |
+      #     PATH=$PATH:$PWD
+      #     mkdir -p git-issue-test
+      #     mkdir -p git-issue-test/artifacts
+      #     echo "Running tests..."
+      #     cd git-issue-test
+      #     #./run_gh_tests.sh > artifacts/test.log 2>&1
+      #     bash -x ../run_test_issues.sh > artifacts/run_test_issues.log 2>&1
 
-  #     - name: Upload test artifacts
-  #       uses: actions/upload-artifact@v4
-  #       with:
-  #         name: test-output-macos
-  #         path: artifacts/
+      - name: Run tests
+        id: tests
+        #continue-on-error: true
+        run: |
+          PATH=$PATH:$PWD
+          cd git-issue-test && echo "git-issue-test"
 
-  #     - name: Fail if tests failed
-  #       if: steps.tests.outcome == 'failure'
-  #       run: exit 1
+          git config --global user.email "kwhkim@gha"
+          git config --global user.name "kwhkim"
 
-  # test-windows:
-  #   runs-on: windows-latest
+          cd R1 && echo "R1"
 
-  #   steps:
-  #     - name: Checkout
-  #       uses: actions/checkout@v4
+          git issue list || true
+          git issue status || true
+          git issue remote || true
+          git issue track || true
 
-  #     - name: Clone to compare directory
-  #       run: |
-  #         mkdir -p git-issue-test
-  #         git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} ./git-issue-test/R1
-  #         git clone --bare https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} ./git-issue-test/bare1.git
+          git issue init --no-clone
+          git issue new --title="first issue" --body="This is for testing"
+          git issue new --title="second issue" --body="This is second issue"
 
-  #     - name: Show shell info
-  #       shell: bash
-  #       run: |
-  #         mkdir -p artifacts
-  #         { 
-  #           echo "Shell: $SHELL"
-  #           uname -a
-  #           which bash
-  #           pwd
-  #           ls -la 
-  #         } > artifacts/test_shell.txt 2>&1
+          git issue status
+          git issue commit -m "R1 first commit"
 
-  #     - name: Run tests
-  #       id: tests
-  #       shell: bash
-  #       continue-on-error: true
-  #       run: |
-  #         PATH=$PATH:$PWD
-  #         mkdir -p git-issue-test
-  #         mkdir -p git-issue-test/artifacts
-  #         echo "Running tests..."
-  #         cd git-issue-test
-  #         #./run_gh_tests.sh > artifacts/test.log 2>&1
-  #         bash -x ../run_test_issues.sh > artifacts/run_test_issues.log 2>&1
+          git issue list
+          git issue new --title="third issue" --body="This is the third"
+          git issue status
+          git issue commit -m "R1 second commit"
 
-  #     - name: Upload test artifacts
-  #       uses: actions/upload-artifact@v4
-  #       with:
-  #         name: test-output-windows
-  #         path: artifacts/
+          git remote add local ../bare1.git
+          git issue track local
+          git issue push local
 
-  #     - name: Fail if tests failed
-  #       if: steps.tests.outcome == 'failure'
-  #       run: exit 1
+          cd ..
+
+          if [ ! -d R2 ]; then git clone bare1.git R2; fi
+          cd R2 && echo R2
+          git issue clone
+          git issue list
+          git issue status
+
+          git issue new --title="4th issue" --body="This is 4th" --type="announcement" --priority="P1"
+          git issue new --title="5th issue" --body="This happens when ..." --type="bug" --priority="P1"
+          git issue commit -m "R2 issue number 4 and 5"
+
+          git issue push
+          cd ..
+
+          if [ ! -d R3 ]; then git clone bare1.git R3; fi
+          cd R3 && echo R3
+
+          git issue init --clone
+          git issue list
+          git issue status
+          git issue pull
+
+          pwd
+          cd ..
+
+          if [ ! -d R4 ]; then git clone bare1.git R4; fi
+
+          if [ ! -d R5 ]; then git clone bare1.git R5; fi
+
+          pwd
+          cd R5 && git issue init --clone && cd ..
+
+          pwd
+          cd R4
+          git issue clone
+
+          id=$(git issue list | awk '{print $1}' | grep -v ID | head -1)
+          git issue comment "$id" -m "Looks good. keep it up"
+
+          git issue new --title="6th issue" --body="This is 6th" --type="announcement" --priority="P2"
+          git issue commit -m "R4 commit 1"
+          git issue new --title="7th issue" --body="This happens when ..." --type="bug" --priority="P2"
+          git issue commit -m "R4 commit 2"
+
+          git issue push
+          cd ..
+
+          cd R3
+          pwd
+          git issue pull
+          cd ..
+
+          cd R5
+          pwd
+
+          git issue new --title="6th another issue" --body="This is 6th" --type="announcement" --priority="P2"
+          git issue commit -m "R5 commit 1b"
+          git issue new --title="7th another issue" --body="This happens when ..." --type="bug" --priority="P2"
+          git issue commit -m "R5 commit 2b"
+
+          id=$(git issue list | awk '{print $1}' | grep -v ID | head -1)
+          git issue comment "$id" -m "Let's get rolling."
+
+          git issue push || true
+          git issue pull
+          git issue list
+
+          cd - 
+
+
+          if [ ! -d R6 ]; then git clone bare1.git R6; fi
+
+      - name: Upload test artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-output-macos
+          path: artifacts/
+
+      - name: Fail if tests failed
+        if: steps.tests.outcome == 'failure'
+        run: exit 1
+
+  test-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Clone to compare directory
+        run: |
+          mkdir -p git-issue-test
+          git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} ./git-issue-test/R1
+          git clone --bare https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} ./git-issue-test/bare1.git
+
+      - name: Show shell info
+        shell: bash
+        run: |
+          mkdir -p artifacts
+          { 
+            echo "Shell: $SHELL"
+            uname -a
+            which bash
+            pwd
+            ls -la 
+          } > artifacts/test_shell.txt 2>&1
+
+      # - name: Run tests
+      #   id: tests
+      #   shell: bash
+      #   continue-on-error: true
+      #   run: |
+      #     PATH=$PATH:$PWD
+      #     mkdir -p git-issue-test
+      #     mkdir -p git-issue-test/artifacts
+      #     echo "Running tests..."
+      #     cd git-issue-test
+      #     #./run_gh_tests.sh > artifacts/test.log 2>&1
+      #     bash -x ../run_test_issues.sh > artifacts/run_test_issues.log 2>&1
+
+      - name: Run tests
+        id: tests
+        #continue-on-error: true
+        run: |
+          PATH=$PATH:$PWD
+          cd git-issue-test && echo "git-issue-test"
+
+          git config --global user.email "kwhkim@gha"
+          git config --global user.name "kwhkim"
+
+          cd R1 && echo "R1"
+
+          git issue list || true
+          git issue status || true
+          git issue remote || true
+          git issue track || true
+
+          git issue init --no-clone
+          git issue new --title="first issue" --body="This is for testing"
+          git issue new --title="second issue" --body="This is second issue"
+
+          git issue status
+          git issue commit -m "R1 first commit"
+
+          git issue list
+          git issue new --title="third issue" --body="This is the third"
+          git issue status
+          git issue commit -m "R1 second commit"
+
+          git remote add local ../bare1.git
+          git issue track local
+          git issue push local
+
+          cd ..
+
+          if [ ! -d R2 ]; then git clone bare1.git R2; fi
+          cd R2 && echo R2
+          git issue clone
+          git issue list
+          git issue status
+
+          git issue new --title="4th issue" --body="This is 4th" --type="announcement" --priority="P1"
+          git issue new --title="5th issue" --body="This happens when ..." --type="bug" --priority="P1"
+          git issue commit -m "R2 issue number 4 and 5"
+
+          git issue push
+          cd ..
+
+          if [ ! -d R3 ]; then git clone bare1.git R3; fi
+          cd R3 && echo R3
+
+          git issue init --clone
+          git issue list
+          git issue status
+          git issue pull
+
+          pwd
+          cd ..
+
+          if [ ! -d R4 ]; then git clone bare1.git R4; fi
+
+          if [ ! -d R5 ]; then git clone bare1.git R5; fi
+
+          pwd
+          cd R5 && git issue init --clone && cd ..
+
+          pwd
+          cd R4
+          git issue clone
+
+          id=$(git issue list | awk '{print $1}' | grep -v ID | head -1)
+          git issue comment "$id" -m "Looks good. keep it up"
+
+          git issue new --title="6th issue" --body="This is 6th" --type="announcement" --priority="P2"
+          git issue commit -m "R4 commit 1"
+          git issue new --title="7th issue" --body="This happens when ..." --type="bug" --priority="P2"
+          git issue commit -m "R4 commit 2"
+
+          git issue push
+          cd ..
+
+          cd R3
+          pwd
+          git issue pull
+          cd ..
+
+          cd R5
+          pwd
+
+          git issue new --title="6th another issue" --body="This is 6th" --type="announcement" --priority="P2"
+          git issue commit -m "R5 commit 1b"
+          git issue new --title="7th another issue" --body="This happens when ..." --type="bug" --priority="P2"
+          git issue commit -m "R5 commit 2b"
+
+          id=$(git issue list | awk '{print $1}' | grep -v ID | head -1)
+          git issue comment "$id" -m "Let's get rolling."
+
+          git issue push || true
+          git issue pull
+          git issue list
+
+          cd - 
+
+
+          if [ ! -d R6 ]; then git clone bare1.git R6; fi
+
+      - name: Upload test artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-output-windows
+          path: artifacts/
+
+      - name: Fail if tests failed
+        if: steps.tests.outcome == 'failure'
+        run: exit 1
 
