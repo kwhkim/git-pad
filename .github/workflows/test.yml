@@ -21,10 +21,13 @@ jobs:
         id: tests
         continue-on-error: true
         run: |
-          mkdir -p artifacts
+          PATH=$PATH:$PWD
+          mkdir -p git-issue-test
+          mkdir -p git-issue-test/artifacts
           echo "Running tests..."
+          cd git-issue-test
           #./run_gh_tests.sh > artifacts/test.log 2>&1
-          bash run_gh_tests.sh > artifacts/test.log 2>&1
+          bash -x ../run_test_issues.sh > artifacts/run_test_issues.log 2>&1
 
       - name: Upload test artifacts
         uses: actions/upload-artifact@v4
@@ -47,10 +50,13 @@ jobs:
         id: tests
         continue-on-error: true
         run: |
-          mkdir -p artifacts
+          PATH=$PATH:$PWD
+          mkdir -p git-issue-test
+          mkdir -p git-issue-test/artifacts
           echo "Running tests..."
+          cd git-issue-test
           #./run_gh_tests.sh > artifacts/test.log 2>&1
-          bash run_gh_tests.sh > artifacts/test.log 2>&1
+          bash -x ../run_test_issues.sh > artifacts/run_test_issues.log 2>&1
 
       - name: Upload test artifacts
         uses: actions/upload-artifact@v4
@@ -86,9 +92,13 @@ jobs:
         shell: bash
         continue-on-error: true
         run: |
-          mkdir -p artifacts
+          PATH=$PATH:$PWD
+          mkdir -p git-issue-test
+          mkdir -p git-issue-test/artifacts
           echo "Running tests..."
-          bash run_gh_tests.sh > artifacts/test.log 2>&1
+          cd git-issue-test
+          #./run_gh_tests.sh > artifacts/test.log 2>&1
+          bash -x ../run_test_issues.sh > artifacts/run_test_issues.log 2>&1
 
       - name: Upload test artifacts
         uses: actions/upload-artifact@v4
