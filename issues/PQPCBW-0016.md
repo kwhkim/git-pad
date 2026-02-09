@@ -1,5 +1,5 @@
 ---
-title: git issue list need truncation for title
+title: git pad list need truncation for title
 type: enhancement
 priority: P3
 status: open

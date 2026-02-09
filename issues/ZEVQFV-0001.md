@@ -1,5 +1,5 @@
 ---
-title: test `git issue new`
+title: test `git pad new`
 type: test
 priority: P3
 status: open
@@ -7,7 +7,7 @@ status: open
 
 ## Description
 
-Make sure `git issue new` works correctly in a fresh issue clone.
+Make sure `git pad new` works correctly in a fresh issue clone.
 
 ## Steps to Reproduce
 

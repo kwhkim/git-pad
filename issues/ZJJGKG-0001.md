@@ -1,5 +1,5 @@
 ---
-title: git issue merge/rebase with --audit
+title: git pad merge/rebase with --audit
 type: enhancement
 priority: P2
 ---

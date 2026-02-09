@@ -1,5 +1,5 @@
 ---
-title: #CMT in the output of `git issue list`
+title: #CMT in the output of `git pad list`
 type: enhancement
 priority: P3
 status: open

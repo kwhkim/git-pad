@@ -9,8 +9,8 @@ priority: P2
 Enable the following usage.
 
 ```
-git issue <tab-completion>
-git issue edit <tab-completion> # for issue ID, possibly respect .local-repo-id
+git pad <tab-completion>
+git pad edit <tab-completion> # for issue ID, possibly respect .local-repo-id
 ```
 
 ## Steps to Reproduce

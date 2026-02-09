@@ -15,7 +15,7 @@ How is commenting done?
 
 ## Steps to Reproduce
 
-`git issue comment $issue_id`
+`git pad comment $issue_id`
 
 ## Expected Behavior
 

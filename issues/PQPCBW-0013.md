@@ -15,7 +15,7 @@ github supports automatic status change by commit messages like resolves #(issue
 
 A commit with a message include "close/close/fix... #ABCDEF-0000" automatically change the status of the issue by
 1. post-commit hooks?
-2. `git issue auto-close` : automatically change the status of the issues reference in **the last commit message**
+2. `git pad auto-close` : automatically change the status of the issues reference in **the last commit message**
   - what if no status in yaml?
  
 

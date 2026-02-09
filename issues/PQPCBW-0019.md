@@ -1,5 +1,5 @@
 ---
-title: Testing git issue push/fetch
+title: Testing git pad push/fetch
 type: test
 priority: P2
 status: open
@@ -7,11 +7,11 @@ status: open
 
 ## Description
 
-git issue clone succeeded with the following.
+git pad clone succeeded with the following.
 
-git issue fetch
+git pad fetch
 git worktree add .issues/ origin/issues/latest
-git issue list
+git pad list
 
 
 ## Steps to Reproduce

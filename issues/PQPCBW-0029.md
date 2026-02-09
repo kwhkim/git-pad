@@ -1,5 +1,5 @@
 ---
-title: issue id after `git issue new`
+title: issue id after `git pad new`
 type: enhancement
 priority: P3
 status: open

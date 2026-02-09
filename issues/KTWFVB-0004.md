@@ -7,7 +7,7 @@ status: open
 
 ## Description
 
-`git issue show AAAAAA-0001.md` does not output anything.
+`git pad show AAAAAA-0001.md` does not output anything.
 
 1. print "No file found"
 2. Make `AAAAAA-0001.md` be recognized as `AAAAAA-0001`

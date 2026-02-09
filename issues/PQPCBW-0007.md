@@ -16,7 +16,7 @@ a user might want to record the current branches, or relevant information about 
 
 ## Expected Behavior
 
-1. When starting `git issue new`, you might select which information to record(like current HEAD's hash, etc.)
+1. When starting `git pad new`, you might select which information to record(like current HEAD's hash, etc.)
 2. Or, by default, the editor could be pre-populated with relevant information, in addition to the contents of the template file,
    so that user might choose to keep it or remove it.
 3. 

@@ -1,5 +1,5 @@
 ---
-title: git-issue invariance check
+title: git-pad invariance check
 type: enhancement
 priority: P3
 status: open
@@ -7,8 +7,8 @@ status: open
 
 ## Description
 
-Using git commands like git reset, git push --force, etc in git-issue worktree
-might restort git-issue's invariance and make git-issue to malfunction.
+Using git commands like git reset, git push --force, etc in git-pad worktree
+might restort git-pad's invariance and make git-issue to malfunction.
 
 So it would be nice to have a function to check and restore the invariance.
 
@@ -16,8 +16,8 @@ So it would be nice to have a function to check and restore the invariance.
 
 ## Expected Behavior
 
-git issue check(?)
-git issue check-invariace(?)
-git issue fsck(?)
+git pad check(?)
+git pad check-invariace(?)
+git pad fsck(?)
 
 ## Notes

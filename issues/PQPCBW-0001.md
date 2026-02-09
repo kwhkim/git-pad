@@ -1,5 +1,5 @@
 ---
-title: testing if git issue new works
+title: testing if git pad new works
 type: test
 priority: P3
 status: wip

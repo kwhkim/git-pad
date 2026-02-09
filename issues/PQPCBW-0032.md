@@ -1,5 +1,5 @@
 ---
-title: When `git issue new` ends with no contents, no file should be created.
+title: When `git pad new` ends with no contents, no file should be created.
 type: enhancement
 priority: P2
 status: open
@@ -7,7 +7,7 @@ status: open
 
 ## Description
 
-Use the same logic for `git issue comment`
+Use the same logic for `git pad comment`
 
 - First temporary file with templates
 - Do not create issue file when there is no contents

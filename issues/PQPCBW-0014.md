@@ -1,5 +1,5 @@
 ---
-title: test if git issue push/fetch/merge works all right
+title: test if git pad push/fetch/merge works all right
 type: test
 priority: P2
 status: open
@@ -7,7 +7,7 @@ status: open
 
 ## Description
 
-fetch and git issue status
+fetch and git pad status
 
 merge has four different situations.
 1. local ahead : git push okay, git fetch okay, git fetch&merge -> rebase or merge

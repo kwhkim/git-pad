@@ -7,7 +7,7 @@ status: open
 
 ## Description
 
-When running first `git issue new`, git-issue gets preferred local repo UID list so that use it as local repo UID if possible.
+When running first `git pad new`, git-issue gets preferred local repo UID list so that use it as local repo UID if possible.
 If connected to the remote repository, check if any one of preferred repo UID can be registerred(or go public).
 If successfully registerred, use it as a repo ID. If not, use auto-generated repo ID or retry with more preferred IDs.
 

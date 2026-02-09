@@ -1,5 +1,5 @@
 ---
-title: `git issue show ` to show comments 
+title: `git pad show ` to show comments 
 type: enhancement
 priority: P1
 ---
@@ -8,8 +8,8 @@ priority: P1
 
 How to see comments?
 
-`git issue list` to show # of comments
-`git issue show` to show comments after the issue.
+`git pad list` to show # of comments
+`git pad show` to show comments after the issue.
 
 ## Steps to Reproduce
 

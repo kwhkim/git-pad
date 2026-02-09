@@ -1,5 +1,5 @@
 ---
-title: aliases for `git issue new`
+title: aliases for `git pad new`
 type: enhancement
 priority: P3
 status: open
@@ -7,9 +7,9 @@ status: open
 
 ## Description
 
-all of `git issue new`, `git issue add` and `git issue create` seem to mean the same thing.
+all of `git pad new`, `git issue add` and `git issue create` seem to mean the same thing.
 
-`git issue add` might sound ambiguous in the context of git,
+`git pad add` might sound ambiguous in the context of git,
 because `git add` is for staging files in the working tree.
 
 We might choose different models for managing issues: 
@@ -22,7 +22,7 @@ We might choose different models for managing issues:
 
 ## Expected Behavior
 
-1. `git issue new|add|create` work the same.
+1. `git pad new|add|create` work the same.
 2. select modes like git-native mode or issue-centered mode.
 
 ## Notes

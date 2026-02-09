@@ -1,5 +1,5 @@
 ---
-title: git issue merge, resolve conflict
+title: git pad merge, resolve conflict
 type: feature
 priority: P1
 status: open
@@ -7,33 +7,33 @@ status: open
 
 ## Description
 
-`git issue merge` for merging remote issues with local issues.
+`git pad merge` for merging remote issues with local issues.
 merge with ff if possible.
 merge with rebase if no conflict.
-stop if conflict, edit manually, and do `git issue merge --continue`, `git issue commit` or `git issue merge --abort`
+stop if conflict, edit manually, and do `git pad merge --continue`, `git issue commit` or `git issue merge --abort`
 
 ## Steps 
 
 Testing suites?
 
 ```{bash}
-git issue init
-git issue new --title $TITLE --type $TYPE --priority $PRIORITY --status $STATUS --body $BODY
-git issue commit
+git pad init
+git pad new --title $TITLE --type $TYPE --priority $PRIORITY --status $STATUS --body $BODY
+git pad commit
 
-git issue new --title $TITLE --type $TYPE --priority $PRIORITY --status $STATUS --body $BODY
-git issue commit
-git issue push
+git pad new --title $TITLE --type $TYPE --priority $PRIORITY --status $STATUS --body $BODY
+git pad commit
+git pad push
 
-git issue new --title $TITLE --type $TYPE --priority $PRIORITY --status $STATUS --body $BODY
-git issue commit
+git pad new --title $TITLE --type $TYPE --priority $PRIORITY --status $STATUS --body $BODY
+git pad commit
 
-git issue new --title $TITLE --type $TYPE --priority $PRIORITY --status $STATUS --body $BODY
-git issue commit
+git pad new --title $TITLE --type $TYPE --priority $PRIORITY --status $STATUS --body $BODY
+git pad commit
 ```
 
 ```{bash}
-git issue clone
+git pad clone
 
 
 
