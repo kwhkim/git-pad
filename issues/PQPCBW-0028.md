@@ -2,7 +2,7 @@
 title: create and modify comments on an issue
 type: enhancement
 priority: P1
-status: open
+status: closed
 ---
 
 ## Description
@@ -20,3 +20,6 @@ How is commenting done?
 ## Expected Behavior
 
 ## Notes
+
+in a sub-directory named $ISSUE_ID/comments/
+naming?

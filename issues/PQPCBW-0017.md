@@ -2,7 +2,7 @@
 title: git pad merge, resolve conflict
 type: feature
 priority: P1
-status: open
+status: closed
 ---
 
 ## Description
@@ -10,7 +10,9 @@ status: open
 `git pad merge` for merging remote issues with local issues.
 merge with ff if possible.
 merge with rebase if no conflict.
-stop if conflict, edit manually, and do `git pad merge --continue`, `git issue commit` or `git issue merge --abort`
+stop if conflict, edit manually, and do `git pad merge --continue`, `git pad commit` or `git issue pad --abort`
+
+`git pad merge --rebase` for rebase, or merge by default
 
 ## Steps 
 
@@ -34,7 +36,7 @@ git pad commit
 
 ```{bash}
 git pad clone
-
+```
 
 
 

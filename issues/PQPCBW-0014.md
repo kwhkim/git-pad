@@ -2,7 +2,7 @@
 title: test if git pad push/fetch/merge works all right
 type: test
 priority: P2
-status: open
+status: closed
 ---
 
 ## Description

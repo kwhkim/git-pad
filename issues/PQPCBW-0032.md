@@ -2,7 +2,7 @@
 title: When `git pad new` ends with no contents, no file should be created.
 type: enhancement
 priority: P2
-status: open
+status: closed
 ---
 
 ## Description

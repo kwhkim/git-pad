@@ -2,7 +2,7 @@
 title: #CMT in the output of `git pad list`
 type: enhancement
 priority: P3
-status: open
+status: closed(3779fbc7d7)
 ---
 
 ## Description

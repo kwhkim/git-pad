@@ -2,7 +2,7 @@
 title: aliases for `git pad new`
 type: enhancement
 priority: P3
-status: open
+status: closed
 ---
 
 ## Description
@@ -23,6 +23,8 @@ We might choose different models for managing issues:
 ## Expected Behavior
 
 1. `git pad new|add|create` work the same.
+  - To avoid confusion with `git add`, no `git pad add`
+
 2. select modes like git-native mode or issue-centered mode.
 
 ## Notes

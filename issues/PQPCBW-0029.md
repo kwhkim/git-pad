@@ -2,7 +2,7 @@
 title: issue id after `git pad new`
 type: enhancement
 priority: P3
-status: open
+status: closed
 ---
 
 ## Description
