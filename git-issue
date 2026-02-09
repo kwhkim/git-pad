@@ -32,10 +32,12 @@ case "$cmd" in
   remote)  git_issue_track "$@" ;;
   track)   git_issue_track "$@" ;;
   remove)  git_issue_remove "$@" ;;
+  version) git_issue_version "$@" ;;
 
   *)
     echo "usage for local   : git issue <init|edit|status|commit|comment|log|list|list-full|show|search|remove>"
     echo "      for remotes : git issue <clone|track|push|pull|fetch|merge>"
+    echo "                  : git issue version"
     exit 1
     ;;
 esac
