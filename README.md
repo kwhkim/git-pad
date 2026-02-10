@@ -48,7 +48,12 @@ that uses custom refs(`refs/issues/latest`, `refs/remote/$REMOTE/issues/latest`)
 ## Usage
 
 ```{bash}
+# Install
+git clone https://github.com/kwhkim/git-pad.git
+cd git-pad
 PATH=$PATH:$(pwd)  # replace $(pwd) with the directory name where git-pad, git-pad-utils live
+
+cd $GIT_PROJECT_PATH
 git pad init # or git pad clone if there is already remote 
 git pad list
 # A
