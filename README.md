@@ -139,13 +139,26 @@ git pad list
 
 ## To-Dos
 
+* Different Template for Issue types
+  * Current, only one `TEMPLATE.md` for all issues
+    * possibly, `git pad new --type=bug` to specify the type and the template.
+
 * github bridge
-  * Download github issue list from `$REPO`(in `gh_list_vars.sh`)
+  * Download github issue list from `$REPO_KEY`(in `gh_list_vars.sh`)
   * `gh_list_vars.sh`
   * `gh_list_init.sh`
   * `gh_list_download.sh`, `gh_list_download_stopped.sh`
   * `gh_list_export.sh`
   
 * gitlab bridge
+* gitbucket bridge
+
+* add LICENSE
+
+* 
 
 You can see the list of issues, todos in the git-embedded issues using `git-pad`.
+
+## Contributions
+
+Contributions are welcome. Fork the repo and send a PR.
