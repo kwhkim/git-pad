@@ -1,7 +1,7 @@
 # git-pad
 
 A **lightweight** **git-embedded** _issue tracking tool_
-that uses custom refs(`refs/issues/latest`, `refs/remote/$REMOTE/issues/latest`)
+that uses custom refs(`refs/issues/latest`, `refs/remote/$REMOTE/issues/latest`) and an orphaned-working tree.
 
 ## Philosophy
 
@@ -17,12 +17,12 @@ that uses custom refs(`refs/issues/latest`, `refs/remote/$REMOTE/issues/latest`)
 
 * Distributed
   * No 3rd-party service needed -> No vendor lock-in
-  * To avoid conflicts between locally generated issue files, we used random filename base on local repository
+  * To avoid conflicts between locally generated issue files, we used random filename base on local repository(Compared to using UUID, ULID, easy to remember).
 * Issues are stored in the same repository
   * No another independent repository(main point of git-native issue tracking tool)
 * Issues reside in a seperate folder and have different isolated history
   * Using custom ref, issue-ref would not be shown in `git branch`
-  * Using worktree, you can do whatever git commands in the linked worktree(eg. .issues/)
+  * Using worktree, you can do whatever git commands in the linked worktree(eg. .git-pad/)
   * Issues isolated from codes
 * Issue file names are simple and readable
   * Most hash or ULID, UUID are long and hard to read

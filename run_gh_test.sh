@@ -1,12 +1,12 @@
-#PATH=$PATH:$(realpath ~/git/git-issue)
+#PATH=$PATH:$(realpath ~/git/git-pad)
 
-# if [ ! -d R1 ]; then git clone git@github.com:kwhkim/git-issue.git R1; fi
+# if [ ! -d R1 ]; then git clone git@github.com:kwhkim/git-pad.git R1; fi
 
-# #if [ ! -d bare1.git ]; then git clone --bare git@github.com:kwhkim/git-issue.git bare1.git; fi
+# #if [ ! -d bare1.git ]; then git clone --bare git@github.com:kwhkim/git-pad.git bare1.git; fi
 # if [ -d bare1.git ]; then rm bare1.git || rm -rf bare1.git; fi
-# git clone --bare git@github.com:kwhkim/git-issue.git bare1.git
+# git clone --bare git@github.com:kwhkim/git-pad.git bare1.git
 
-cd git-issue-test && echo "git-issue-test"
+cd git-pad-test && echo "git-pad-test"
 
 cd R1 && echo "R1"
 git pad list 
