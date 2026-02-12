@@ -3,7 +3,22 @@
 A **lightweight** **git-embedded** _issue tracking tool_
 that uses custom refs(`refs/issues/latest`, `refs/remote/$REMOTE/issues/latest`) and an orphaned-working tree.
 
-## Philosophy
+- Personal motivation:
+  
+> I wanted issue tracking to be fully integrated into a Git repository while remaining lightweight and flexible. Most Git-native issue management tools require additional installation or embed issues into commits or Git notes, which makes searching and modifying them cumbersome. Instead, I wanted issues to exist as simple files so they could be searched, edited, and managed freely.
+
+## <a name="table-of-contents"></a> Table of Contents
+
+* Philosophy
+* Design
+* Usage
+* Implementation Detail
+* Related Projects
+* Discussion
+* To-Dos
+* Contributions
+
+## Philosophy <small><sup>[▲](#table-of-contents)</sup></small>
 
 * run `git pad $COMMAND`
   * most commands are just like git commands 
@@ -13,7 +28,7 @@ that uses custom refs(`refs/issues/latest`, `refs/remote/$REMOTE/issues/latest`)
   * No staginag area
     * `commit` = `add` + `commit` (in git) 
   
-## Design
+## Design <small><sup>[▲](#table-of-contents)</sup></small>
 
 * Distributed
   * No 3rd-party service needed -> No vendor lock-in
@@ -45,7 +60,7 @@ that uses custom refs(`refs/issues/latest`, `refs/remote/$REMOTE/issues/latest`)
   * You can use pre-commit, post-commit hooks.
     * eg. Use AI API to polish issues
   
-## Usage
+## Usage <small><sup>[▲](#table-of-contents)</sup></small>
 
 ```{bash}
 # Install
@@ -76,7 +91,7 @@ git pad list
 # goes to A
 ```
 
-## Implementation detail
+## Implementation detail <small><sup>[▲](#table-of-contents)</sup></small>
 
 * Git-Embedded Distributed Issues Management System
   * `git-pad` : dispatcher for commands like `git pad init`, `git pad new`, etc.
@@ -97,7 +112,16 @@ git pad list
   * Originally named `git-issue`. But there is already another project named `git-issue`(see Related Projects), so it was renamed to **git-pad**. So the filename and functions are all renamed to **pad**(commit `...`).
 
   
-## Related Projects(as-of 2026.02.04)
+## Related Projects(as-of 2026.02.04) <small><sup>[▲](#table-of-contents)</sup></small>
+
+|           | Storage                | 
+| --------- | ---------------------- | 
+| `git-appraise` | git notes         |   
+| `git-issue`  | repo                |   
+| `git-dit`    | git commits(empty)   |  
+| `git-bug`    | custom ref            | 
+| `BE`         | file                 |  
+
 
 * [Yona: Project Hosting SW](https://github.com/yona-projects/yona)
   * Git/SVN + MariaDB
@@ -129,7 +153,7 @@ git pad list
   * no git-native, local(cannot be shared using git)
   * latest commit : 15 years ago
 
-## Discussion about git-native issue tracking tools
+## Discussion about git-native issue tracking tools <small><sup>[▲](#table-of-contents)</sup></small>
 
 * [reddit/git](https://www.reddit.com/r/git/)
 * [reddit: Decentralized Issue Tracking](https://www.reddit.com/r/programming/comments/4od2ni/decentralized_issue_tracking/)
@@ -137,7 +161,7 @@ git pad list
 * [StackOverflow: Is possible to store repository issues in the git repository?](https://stackoverflow.com/questions/19938579/is-possible-to-store-repository-issues-in-the-git-repository)
 * [StackOverflow: Keeping track of To-Do and issues in Git](https://stackoverflow.com/questions/7060973/keeping-track-of-to-do-and-issues-in-git)
 
-## To-Dos
+## To-Dos <small><sup>[▲](#table-of-contents)</sup></small>
 
 * Different Template for Issue types
   * Current, only one `TEMPLATE.md` for all issues
@@ -159,6 +183,6 @@ git pad list
 
 You can see the list of issues, todos in the git-embedded issues using `git-pad`.
 
-## Contributions
+## Contributions <small><sup>[▲](#table-of-contents)</sup></small>
 
 Contributions are welcome. Fork the repo and send a PR.
