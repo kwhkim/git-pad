@@ -1,6 +1,6 @@
 # git-pad
 
-A **lightweight** **git-embedded** _issue tracking tool_
+A **lightweight** **git-native** _issue tracking tool_
 that uses custom refs(`refs/issues/latest`, `refs/remote/$REMOTE/issues/latest`) and an orphaned-working tree.
 
 - Personal motivation:
