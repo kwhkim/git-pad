@@ -71,6 +71,7 @@ PATH=$PATH:$(pwd)  # replace $(pwd) with the directory name where git-pad, git-p
 cd $GIT_PROJECT_PATH
 git pad init # or git pad clone if there is already remote 
 git pad list
+git pad --open --sort-pri # open issues only, sorted by priority
 # A
 
 git pad show $ISSUE_ID
