@@ -1,6 +1,9 @@
 #!/bin/bash
 set -eu
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_PATH="${SCRIPT_DIR}/$(basename "${BASH_SOURCE[0]}")"
+
 . git-pad-utils
 . new_filename.sh
 
