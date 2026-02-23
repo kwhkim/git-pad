@@ -11,6 +11,7 @@ that uses custom refs(`refs/issues/latest`, `refs/remote/$REMOTE/issues/latest`)
 
 * Philosophy
 * Design
+* Install
 * Usage
 * Implementation Detail
 * Related Projects
@@ -59,15 +60,37 @@ that uses custom refs(`refs/issues/latest`, `refs/remote/$REMOTE/issues/latest`)
 * Freedom to customize
   * You can use pre-commit, post-commit hooks.
     * eg. Use AI API to polish issues
+
+## Install <small><sup>[▲](#table-of-contents)</sup></small>
+
+* run the following in bash(or zsh)
+
+```
+git clone https://github.com/kwhkim/git-pad.git
+cd git-pad
+bash install.sh
+```
+
+Script above will add the line similar to the following to ~/.bashrc or ~/.zschrc depending on OS
+
+```
+## git-pad
+PATH=$PATH:/home/user/git/git-pad;
+export PATH;
+source /home/user/git/git-pad/autocompletion.sh;
+```
+
+Delete them to uninstall.
   
 ## Usage <small><sup>[▲](#table-of-contents)</sup></small>
 
 ```{bash}
-# Install
+# Quick-setup or run install.sh above
 git clone https://github.com/kwhkim/git-pad.git
 cd git-pad
 PATH=$PATH:$(pwd)  # replace $(pwd) with the directory name where git-pad, git-pad-utils live
 
+# get to the project directory and test git-pad
 cd $GIT_PROJECT_PATH
 git pad init # or git pad clone if there is already remote 
 git pad list
@@ -163,6 +186,8 @@ git pad list
 * [StackOverflow: Keeping track of To-Do and issues in Git](https://stackoverflow.com/questions/7060973/keeping-track-of-to-do-and-issues-in-git)
 
 ## To-Dos <small><sup>[▲](#table-of-contents)</sup></small>
+
+* ~~auto-completion~~ : enable <TAB> after `git pad` or `git pad edit`
 
 * Different Template for Issue types
   * Current, only one `TEMPLATE.md` for all issues
