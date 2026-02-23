@@ -187,7 +187,7 @@ git pad list
 
 ## To-Dos <small><sup>[▲](#table-of-contents)</sup></small>
 
-* ~~auto-completion~~ : enable <TAB> after `git pad` or `git pad edit`
+* ~~auto-completion~~ : enable `<TAB>` after `git pad` or `git pad edit`
 
 * Different Template for Issue types
   * Current, only one `TEMPLATE.md` for all issues

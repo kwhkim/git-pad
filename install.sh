@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # shellcheck disable=SC2016
 if [ ! -f "git-pad" ] || [ ! -f "autocompletion.sh" ]; then
   echo '!E: Not in git-pad directory';
@@ -9,7 +9,7 @@ block='
 ## git-pad
 PATH=$PATH:'"$PWD"';
 export PATH;
-source '"$(realpath autocompletion.sh);"
+. '"$PWD/autocompletion.sh;"
 
 shell_name="$(basename "$SHELL")"
 
@@ -19,4 +19,10 @@ case "$shell_name" in
   *) echo "Unsupported shell"; exit 1 ;;
 esac
 
-grep -q '## git-pad' "$rc" 2>/dev/null || echo "$block" >> "$rc"
+if grep -q '## git-pad' "$rc" 2>/dev/null; then
+  echo '!W: Looks like it is already installed'
+  echo '--------------------------------------'
+  grep -C 5 '## git-pad' "$rc"
+else
+  echo "$block" >> "$rc" && echo "Installed successfully. Restart your shell."
+fi

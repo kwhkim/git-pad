@@ -20,6 +20,7 @@ source ./autocompletion.sh
 
 # Simulate:
 # git pad e<TAB>
+echo '- Testing git pad e<TAB>'
 COMP_WORDS=(git pad e)
 COMP_CWORD=2
 COMP_LINE="git pad e"
