@@ -35,8 +35,8 @@ jobs:
         run: |
           #PATH=$PATH:$PWD
           #bash install.sh
-          bash get_rc.sh
-          
+          bash get_rc.sh; cat $(bash get_rc.sh)
+
           cd git-pad-test && echo "git-pad-test"
 
           git config --global user.email "kwhkim@gha"
@@ -186,7 +186,7 @@ jobs:
         run: |
           #PATH=$PATH:$PWD
           #bash install.sh
-          bash get_rc.sh
+          bash get_rc.sh; cat $(bash get_rc.sh)
 
           cd git-pad-test && echo "git-pad-test"
 
@@ -349,7 +349,7 @@ jobs:
         run: |
           echo $PATH
           #PATH=$PATH:$PWD
-          bash get_rc.sh
+          bash get_rc.sh; cat $(bash get_rc.sh)
           
           cd git-pad-test && echo "git-pad-test"
 
