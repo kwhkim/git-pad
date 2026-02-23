@@ -81,6 +81,14 @@ source /home/user/git/git-pad/autocompletion.sh;
 ```
 
 Delete them to uninstall.
+
+Or you can use `git-pad` with doing the following,
+
+```bash
+git clone https://github.com/kwhkim/git-pad.git
+cd git-pad
+PATH=$PATH:$PWD
+```
   
 ## Usage <small><sup>[▲](#table-of-contents)</sup></small>
 
@@ -88,7 +96,7 @@ Delete them to uninstall.
 # Quick-setup or run install.sh above
 git clone https://github.com/kwhkim/git-pad.git
 cd git-pad
-PATH=$PATH:$(pwd)  # replace $(pwd) with the directory name where git-pad, git-pad-utils live
+PATH=$PATH:$PWD # replace $PWD with the directory name where git-pad, git-pad-utils live
 
 # get to the project directory and test git-pad
 cd $GIT_PROJECT_PATH
