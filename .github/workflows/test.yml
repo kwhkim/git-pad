@@ -36,7 +36,7 @@ jobs:
 
           cd R1 && echo "R1"
 
-          bash test_completion.sh
+          bash test_completion.bash
 
           git pad list || true
           git pad status || true
@@ -333,6 +333,8 @@ jobs:
           git config --global user.name "kwhkim"
 
           cd R1 && echo "R1"
+
+          bash test_completion.bash
 
           git pad list || true
           git pad status || true
