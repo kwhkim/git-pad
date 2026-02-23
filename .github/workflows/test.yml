@@ -26,16 +26,16 @@ jobs:
       - name: install script
         id : install
         shell: bash
-        run: bash install.sh
+        run: bash install.sh; bash get_rc.sh; cat $(bash get_rc.sh)
 
 
       - name: Run tests
         id: tests
         #continue-on-error: true
         run: |
-          #PATH=$PATH:$PWD
+          PATH=$PATH:$PWD
           #bash install.sh
-          bash get_rc.sh; cat $(bash get_rc.sh)
+          #bash get_rc.sh; cat $(bash get_rc.sh)
 
           cd git-pad-test && echo "git-pad-test"
 
@@ -178,15 +178,15 @@ jobs:
       - name: install script
         id : install
         shell: bash
-        run: bash install.sh
+        run: bash install.sh; bash get_rc.sh; cat $(bash get_rc.sh)
 
       - name: Run tests
         id: tests
         #continue-on-error: true
         run: |
-          #PATH=$PATH:$PWD
+          PATH=$PATH:$PWD
           #bash install.sh
-          bash get_rc.sh; cat $(bash get_rc.sh)
+          #bash get_rc.sh; cat $(bash get_rc.sh)
 
           cd git-pad-test && echo "git-pad-test"
 
@@ -340,7 +340,7 @@ jobs:
       - name: install script
         id : install
         shell: bash
-        run: bash install.sh
+        run: bash install.sh; bash get_rc.sh; cat $(bash get_rc.sh)
 
       - name: Run tests
         id: tests
@@ -348,8 +348,8 @@ jobs:
         #continue-on-error: true
         run: |
           echo $PATH
-          #PATH=$PATH:$PWD
-          bash get_rc.sh; cat $(bash get_rc.sh)
+          PATH=$PATH:$PWD
+          #bash get_rc.sh; cat $(bash get_rc.sh)
           
           cd git-pad-test && echo "git-pad-test"
 
