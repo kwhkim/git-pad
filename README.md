@@ -98,6 +98,13 @@ git clone https://github.com/kwhkim/git-pad.git
 cd git-pad
 PATH=$PATH:$PWD # replace $PWD with the directory name where git-pad, git-pad-utils live
 
+# Current issues with project git-pad
+git pad clone
+git pad list
+git pad show ECBFEC-0004
+git pad show ECBFEC4
+git pad show E<TAB>  # if auto-completion is possible
+
 # get to the project directory and test git-pad
 cd $GIT_PROJECT_PATH
 git pad init # or git pad clone if there is already remote 
