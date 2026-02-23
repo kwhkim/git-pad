@@ -1,21 +1,27 @@
 #!/usr/bin/env bash
 # shellcheck disable=SC2016
-if [ ! -f "git-pad" ] || [ ! -f "autocompletion.sh" ]; then
+if [ ! -f "git-pad" ] || { [ ! -f "autocompletion.sh" ] && [ ! -f "autocompletion.zsh" ]; } ; then
   echo '!E: Not in git-pad directory';
   exit 1
 fi
 
-block='
-## git-pad
-PATH=$PATH:'"$PWD"';
-export PATH;
-. '"$PWD/autocompletion.sh;"
-
 shell_name="$(basename "$SHELL")"
 
 case "$shell_name" in
-  bash) rc="$HOME/.bashrc" ;;
-  zsh)  rc="$HOME/.zshrc" ;;
+  bash) rc="$HOME/.bashrc" 
+        block='
+## git-pad
+PATH=$PATH:'"$PWD"';
+export PATH;
+. '"$PWD/autocompletion.bash;"
+        ;;
+  zsh)  rc="$HOME/.zshrc" 
+        block='
+## git-pad
+PATH=$PATH:'"$PWD"';
+export PATH;
+# Not supported yet . '"$PWD/autocompletion.zsh;"
+        ;;
   *) echo "Unsupported shell"; exit 1 ;;
 esac
 
