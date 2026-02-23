@@ -23,12 +23,18 @@ jobs:
           git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} ./git-pad-test/R1
           git clone --bare https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} ./git-pad-test/bare1.git
           
+      - name: install script
+        id : install
+        shell: bash
+        run: bash install.sh
+
 
       - name: Run tests
         id: tests
         #continue-on-error: true
         run: |
-          PATH=$PATH:$PWD
+          #PATH=$PATH:$PWD
+          #bash install.sh
           cd git-pad-test && echo "git-pad-test"
 
           git config --global user.email "kwhkim@gha"
@@ -167,11 +173,17 @@ jobs:
       #     #./run_gh_tests.sh > artifacts/test.log 2>&1
       #     bash -x ../run_test_issues.sh > artifacts/run_test_issues.log 2>&1
 
+      - name: install script
+        id : install
+        shell: bash
+        run: bash install.sh
+
       - name: Run tests
         id: tests
         #continue-on-error: true
         run: |
-          PATH=$PATH:$PWD
+          #PATH=$PATH:$PWD
+          #bash install.sh
           cd git-pad-test && echo "git-pad-test"
 
           git config --global user.email "kwhkim@gha"
@@ -321,12 +333,18 @@ jobs:
       #     #./run_gh_tests.sh > artifacts/test.log 2>&1
       #     bash -x ../run_test_issues.sh > artifacts/run_test_issues.log 2>&1
 
+      - name: install script
+        id : install
+        shell: bash
+        run: bash install.sh
+
       - name: Run tests
         id: tests
         shell: bash
         #continue-on-error: true
         run: |
-          PATH=$PATH:$PWD
+          #PATH=$PATH:$PWD
+          
           cd git-pad-test && echo "git-pad-test"
 
           git config --global user.email "kwhkim@gha"
