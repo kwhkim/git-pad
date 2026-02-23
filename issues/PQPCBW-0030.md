@@ -2,6 +2,7 @@
 title: `git pad show ` to show comments 
 type: enhancement
 priority: P1
+status: closed
 ---
 
 ## Description
