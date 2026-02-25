@@ -196,7 +196,10 @@ git pad list
   * no git-native, local(cannot be shared using git)
   * latest commit : 15 years ago
   
-![Figure 1](VScode-git-graph-01.png)
+<figure>
+  <img src="VScode-git-graph-01.png" alt="VSCode Git-Graph">
+  <figcaption>Figure 1: VScode git-graph gets messy</figcaption>
+</figure>
 
 ## Discussion about git-native issue tracking tools <small><sup>[▲](#table-of-contents)</sup></small>
 
