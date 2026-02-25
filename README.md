@@ -89,6 +89,8 @@ git clone https://github.com/kwhkim/git-pad.git
 cd git-pad
 PATH=$PATH:$PWD
 ```
+
+⚠️ If you already have linked worktree and set `extensions.worktreeConfig` as false, there is some risk of trouble. So you'd better copy the original repository before trying this. I'd advise you to run `migrate_worktree_config.sh` first to set `extensions.worktreeConfig` as true and do some setting. This will be incorporated into `git pad init` in a later version
   
 ## Usage <small><sup>[▲](#table-of-contents)</sup></small>
 
