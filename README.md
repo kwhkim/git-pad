@@ -155,13 +155,18 @@ git pad list
 
 |           | Storage                | 
 | --------- | ---------------------- | 
+| `git-native-issue` | git commits(empty) |
 | `git-appraise` | git notes         |   
 | `git-issue`  | repo                |   
 | `git-dit`    | git commits(empty)   |  
 | `git-bug`    | custom ref            | 
 | `BE`         | file                 |  
 
-
+* [git-native-issue](https://github.com/remenoscodes/git-native-issue)
+  * seems being actively developed and tested
+  * Using timestamp to resolve conflicts and store issues in empty commits.
+  * Implemented in bash
+  * latest release(v1.3.3) : 2026.2.16
 * [Yona: Project Hosting SW](https://github.com/yona-projects/yona)
   * Git/SVN + MariaDB
   * latest release(1.16.0) : 2023.01.09
@@ -180,8 +185,7 @@ git pad list
   * latest commit : 4 months ago
 * [git-bug](https://github.com/git-bug/git-bug)
   * custom reference 
-    * `git log` gets messy as the number of bugs increases
-      * IDE git history looks messy(eg. VSCode)
+    * In VScode git-graph with remote branches on, the graph gets messy as the number of bugs increases(See the figure 1 below)
     * `git gc` or `git fsck` gets slower
   * latest release : 2025.05.19
 * [git-dit](https://github.com/git-dit/git-dit)
@@ -191,6 +195,8 @@ git pad list
 * [git-track](https://github.com/dhesse/Git-Track)
   * no git-native, local(cannot be shared using git)
   * latest commit : 15 years ago
+  
+![Figure 1](VScode-git-graph-01.png)
 
 ## Discussion about git-native issue tracking tools <small><sup>[▲](#table-of-contents)</sup></small>
 
