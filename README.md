@@ -206,12 +206,14 @@ git pad list
 * [reddit/git](https://www.reddit.com/r/git/)
 * [reddit: Decentralized Issue Tracking](https://www.reddit.com/r/programming/comments/4od2ni/decentralized_issue_tracking/)
 * [reddit: What is your simple issue tracking system](https://www.reddit.com/r/git/comments/wg6mk6/what_is_your_simple_issue_tracking_system/)
+* [HackersNews: Show HN: Git-native-issue - issues stored as commits in refs/issues/](https://news.ycombinator.com/item?id=47135581)
 * [StackOverflow: Is possible to store repository issues in the git repository?](https://stackoverflow.com/questions/19938579/is-possible-to-store-repository-issues-in-the-git-repository)
 * [StackOverflow: Keeping track of To-Do and issues in Git](https://stackoverflow.com/questions/7060973/keeping-track-of-to-do-and-issues-in-git)
 
 ## To-Dos <small><sup>[▲](#table-of-contents)</sup></small>
 
 * ~~auto-completion~~ : enable `<TAB>` after `git pad` or `git pad edit`
+  * MacOS's zsh is yet to be supported
 
 * Different Template for Issue types
   * Current, only one `TEMPLATE.md` for all issues
