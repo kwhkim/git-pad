@@ -18,6 +18,9 @@ git pad edit <tab-completion> # for issue ID, possibly respect .local-repo-id
 
 ## Solution
 
+
+* The following works for bash, but not for zsh(MacOS)
+
 ```bash
 _git_pad ()
 {
