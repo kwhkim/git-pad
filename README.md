@@ -48,6 +48,8 @@ that uses custom refs(`refs/issues/latest`, `refs/remote/$REMOTE/issues/latest`)
     * You can add custom fields in addition to `title:`, `status:`, etc.
   * Easy to search and custom advanced search is possible(using other tools of your choice)
     * issues are just markdown files so you can go into the folder and use `grep`, `ag`, `rg`, etc. if you need.
+  * Do issues need to be stored as git commits or notes, like git-bug, git-native-issue, or git-appraisal? I could not find any reason to support it.
+    * check the related discussion at [HackersNews](https://news.ycombinator.com/item?id=47135581)
 * Commands are just like git
   * most commands work like git(status/commit/push/fetch/merge) except for
     * no staging area, so no add
