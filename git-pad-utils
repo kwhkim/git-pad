@@ -2045,8 +2045,15 @@ git_pad_remove() {
 }
 
 git_pad_version() {
-  root=$(git_project_root)
-  cd "$root" 1>/dev/null 2>&1 || return 1
-  git log -1 --format="%H"
-  cd - 1>/dev/null 2>&1 || return 1
+  # Copy-based install: a VERSION file is placed alongside the scripts
+  if [[ -f "${SCRIPT_DIR}/VERSION" ]]; then
+    cat "${SCRIPT_DIR}/VERSION"
+    return 0
+  fi
+  # PATH/source install: SCRIPT_DIR is the git-pad source repo itself
+  if git -C "${SCRIPT_DIR}" rev-parse --git-dir >/dev/null 2>&1; then
+    git -C "${SCRIPT_DIR}" log -1 --format="%H"
+    return 0
+  fi
+  echo "unknown"
 }
