@@ -24,30 +24,27 @@ if [ -z "${HOME:-}" ]; then
     HOME="$(cd ~ && pwd)"
 fi
 
+# Start the validation and installation
+id="## git-pad"
+
 case "$shell_name" in
-  bash)
-        rc="$HOME/.bashrc"
+  bash | zsh)
+        rc="$HOME/.${shell_name}rc"
+
         block='
-## git-pad
+'"$id"'
 PATH=$PATH:'"$PWD"'
 export PATH
-. '"$PWD"'/autocompletion.bash'
+. '"$PWD"'/autocompletion.'"$shell_name"
         ;;
-  zsh)
-        rc="$HOME/.zshrc"
-        block='
-## git-pad
-PATH=$PATH:'"$PWD"'
-export PATH
-. '"$PWD"'/autocompletion.zsh'
-        ;;
+
   *) echo "Unsupported shell: $shell_name"; exit 1 ;;
 esac
 
-if grep -q '## git-pad' "$rc" 2>/dev/null; then
+if grep -q "$id" "$rc" 2>/dev/null; then
   echo '!W: Looks like it is already installed'
   echo '--------------------------------------'
-  grep -C 5 '## git-pad' "$rc"
+  grep -C 5 "$id" "$rc"
 else
   echo "$block" >> "$rc" && echo "Installed successfully. Restart your shell."
 fi
