@@ -5,14 +5,18 @@ if [ ! -f "git-pad" ] || { [ ! -f "autocompletion.bash" ] && [ ! -f "autocomplet
   exit 1
 fi
 
-# On Windows/Git Bash, $SHELL may be unset or a Windows path
-# so detect the shell via version variables instead
-if [ -n "${ZSH_VERSION:-}" ]; then
-    shell_name="zsh"
-elif [ -n "${BASH_VERSION:-}" ]; then
-    shell_name="bash"
+if [ $# -eq 0 ]; then
+    # On Windows/Git Bash, $SHELL may be unset or a Windows path
+    # so detect the shell via version variables instead
+    if [ -n "${ZSH_VERSION:-}" ]; then
+        exec /usr/bin/env sh $0 zsh;
+    elif [ -n "${BASH_VERSION:-}" ]; then
+        exec /usr/bin/env sh $0 bash;
+    else
+        exec /usr/bin/env sh $0 "$(basename "${SHELL:-unknown}")";
+    fi
 else
-    shell_name="$(basename "${SHELL:-unknown}")"
+    shell_name=$1
 fi
 
 # On Windows, $HOME may be unset
