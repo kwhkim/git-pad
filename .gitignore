@@ -12,3 +12,4 @@ gh_list_dump.sql
 gh_list_state.json
 gh_list.db
 .git-pad-github/
+.git-pad/
