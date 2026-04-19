@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 # shellcheck disable=SC2016
-if [ ! -f "git-pad" ] || { [ ! -f "autocompletion.bash" ] && [ ! -f "autocompletion.zsh" ]; } ; then
+if [ ! -f "git-pad" ] || { [ ! -f "autocompletion.bash" ] && [ ! -f "autocompletion.zsh" ] && [ ! -f "autocompletion.fish" ]; } ; then
   echo '!E: Not in git-pad directory';
   exit 1
 fi
@@ -36,6 +36,15 @@ case "$shell_name" in
 PATH=$PATH:'"$PWD"'
 export PATH
 . '"$PWD"'/autocompletion.'"$shell_name"
+        ;;
+
+  fish)
+        ln -s "$PWD/autocompletion.fish" "$HOME/.config/fish/completions/git-pad.fish"
+        rc="$HOME/.config/fish/config.fish"
+
+        block='
+'"$id"'
+fish_add_path '"$PWD"
         ;;
 
   *) echo "Unsupported shell: $shell_name"; exit 1 ;;
