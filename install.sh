@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env sh
 # shellcheck disable=SC2016
 if [ ! -f "git-pad" ] || { [ ! -f "autocompletion.bash" ] && [ ! -f "autocompletion.zsh" ]; } ; then
   echo '!E: Not in git-pad directory';
@@ -7,16 +7,16 @@ fi
 
 # On Windows/Git Bash, $SHELL may be unset or a Windows path
 # so detect the shell via version variables instead
-if [[ -n "${ZSH_VERSION:-}" ]]; then
+if [ -n "${ZSH_VERSION:-}" ]; then
     shell_name="zsh"
-elif [[ -n "${BASH_VERSION:-}" ]]; then
+elif [ -n "${BASH_VERSION:-}" ]; then
     shell_name="bash"
 else
     shell_name="$(basename "${SHELL:-unknown}")"
 fi
 
 # On Windows, $HOME may be unset
-if [[ -z "${HOME:-}" ]]; then
+if [ -z "${HOME:-}" ]; then
     HOME="$(cd ~ && pwd)"
 fi
 
