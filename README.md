@@ -71,6 +71,8 @@ that uses custom refs(`refs/issues/latest`, `refs/remote/$REMOTE/issues/latest`)
 git clone https://github.com/kwhkim/git-pad.git
 cd git-pad
 bash install.sh
+## Optional for fish
+bash install.sh fish # for autocompletion in fish
 ```
 
 Script above will add the line similar to the following to ~/.bashrc or ~/.zschrc depending on OS
