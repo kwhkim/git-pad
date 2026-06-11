@@ -1,11 +1,26 @@
+# fish 3.x: commandline -o -p -c
+# fish 4.x+: commandline -x -p -c
+
+set -g __fish_git_pad_commandline_opts -o -p -c
+
+set -l __fish_git_pad_major (string split . -- $version)[1]
+if test "$__fish_git_pad_major" -ge 4
+    set -g __fish_git_pad_commandline_opts -x -p -c
+end
+
+function __fish_git_pad_tokens
+    commandline $__fish_git_pad_commandline_opts
+end
+
+
 function __fish_git_pad_command
-    set -l cmd (commandline -pxc)
+    set -l cmd (__fish_git_pad_tokens)
     test (count $cmd) -gt 1
     and contains -- $cmd[2] $argv
 end
 
 function __fish_git_pad_needs_command
-    test (count (commandline -pxc)) -eq 1
+    test (count (__fish_git_pad_tokens)) -eq 1
 end
 
 function __fish_git_pad_issues
