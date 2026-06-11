@@ -84,7 +84,7 @@ source /home/user/git/git-pad/autocompletion.sh;
 
 Delete them to uninstall.
 
-Or you can use `git-pad` with doing the following,
+you can use `git-pad` with doing the following without installing,
 
 ```bash
 git clone https://github.com/kwhkim/git-pad.git
