@@ -1,49 +1,59 @@
-#!/usr/bin/env bash
+#!/usr/bin/env sh
 # shellcheck disable=SC2016
-if [ ! -f "git-pad" ] || { [ ! -f "autocompletion.bash" ] && [ ! -f "autocompletion.zsh" ]; } ; then
+if [ ! -f "git-pad" ] || { [ ! -f "autocompletion.bash" ] && [ ! -f "autocompletion.zsh" ] && [ ! -f "autocompletion.fish" ]; } ; then
   echo '!E: Not in git-pad directory';
   exit 1
 fi
 
-# On Windows/Git Bash, $SHELL may be unset or a Windows path
-# so detect the shell via version variables instead
-if [[ -n "${ZSH_VERSION:-}" ]]; then
-    shell_name="zsh"
-elif [[ -n "${BASH_VERSION:-}" ]]; then
-    shell_name="bash"
+if [ $# -eq 0 ]; then
+    # On Windows/Git Bash, $SHELL may be unset or a Windows path
+    # so detect the shell via version variables instead
+    if [ -n "${ZSH_VERSION:-}" ]; then
+        exec /usr/bin/env sh $0 zsh;
+    elif [ -n "${BASH_VERSION:-}" ]; then
+        exec /usr/bin/env sh $0 bash;
+    else
+        exec /usr/bin/env sh $0 "$(basename "${SHELL:-unknown}")";
+    fi
 else
-    shell_name="$(basename "${SHELL:-unknown}")"
+    shell_name=$1
 fi
 
 # On Windows, $HOME may be unset
-if [[ -z "${HOME:-}" ]]; then
+if [ -z "${HOME:-}" ]; then
     HOME="$(cd ~ && pwd)"
 fi
 
+# Start the validation and installation
+id="## git-pad"
+
 case "$shell_name" in
-  bash)
-        rc="$HOME/.bashrc"
+  bash | zsh)
+        rc="$HOME/.${shell_name}rc"
+
         block='
-## git-pad
+'"$id"'
 PATH=$PATH:'"$PWD"'
 export PATH
-. '"$PWD"'/autocompletion.bash'
+. '"$PWD"'/autocompletion.'"$shell_name"
         ;;
-  zsh)
-        rc="$HOME/.zshrc"
+
+  fish)
+        ln -s "$PWD/autocompletion.fish" "$HOME/.config/fish/completions/git-pad.fish"
+        rc="$HOME/.config/fish/config.fish"
+
         block='
-## git-pad
-PATH=$PATH:'"$PWD"'
-export PATH
-. '"$PWD"'/autocompletion.zsh'
+'"$id"'
+fish_add_path '"$PWD"
         ;;
+
   *) echo "Unsupported shell: $shell_name"; exit 1 ;;
 esac
 
-if grep -q '## git-pad' "$rc" 2>/dev/null; then
+if grep -q "$id" "$rc" 2>/dev/null; then
   echo '!W: Looks like it is already installed'
   echo '--------------------------------------'
-  grep -C 5 '## git-pad' "$rc"
+  grep -C 5 "$id" "$rc"
 else
   echo "$block" >> "$rc" && echo "Installed successfully. Restart your shell."
 fi
