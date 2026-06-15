@@ -241,6 +241,11 @@ git pad list
 
 You can see the list of issues, todos in the git-embedded issues using `git-pad`.
 
+## Contributors <small><sup>[▲](#table-of-contents)</sup></small>
+
+* [schutm](https://github.com/schutm)
+  * Fish shell support
+
 ## Contributions <small><sup>[▲](#table-of-contents)</sup></small>
 
 Contributions are welcome. Fork the repo and send a PR.
