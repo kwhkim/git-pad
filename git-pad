@@ -40,7 +40,7 @@ case "$cmd" in
   version) git_pad_version "$@" ;;
 
   *)
-    echo "usage for local   : git pad <init|edit|status|commit|comment|log|list|list-full|show|search|remove>"
+    echo "usage for local   : git pad <init|new|edit|status|commit|comment|log|list|list-full|show|search|remove>"
     echo "      for remotes : git pad <clone|track|remote|push|pull|fetch|merge>"
     echo "                  : git pad version"
     exit 1
